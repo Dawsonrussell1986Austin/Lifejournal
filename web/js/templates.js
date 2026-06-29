@@ -355,6 +355,23 @@ window.LJTemplates = (function () {
     ruled(ctx, rx, M + 814, rw, 2, 36);
   }
 
+  function planWeek(ctx, o) {
+    const P = LJPlanner, ws = P.partsFor(o.weekStart);
+    const endIso = P.isoFromTs(Date.UTC(ws.year, ws.month, ws.day) + 6 * P.DAY_MS);
+    const we = P.partsFor(endIso);
+    label(ctx, 'Week', M, M + 40, { size: 24, color: COLORS.ink });
+    text(ctx, `${ws.shortMonthDay} – ${we.shortMonthDay}, ${we.year}`, M, M + 74, `400 16px ${SANS}`, COLORS.softInk);
+    text(ctx, '‹ ' + ws.monthName, W - M - 170, M + 38, `500 15px ${SANS}`, COLORS.accent);
+    caption(ctx, 'Tap a day to open it.', M, M + 102);
+    P.weekDayRects(o.weekStart).forEach((r, i) => {
+      const d = P.partsFor(r.date);
+      hline(ctx, r.x, r.y, r.w, COLORS.rule);
+      text(ctx, d.weekdayName, r.x, r.y + 32, `600 16px ${SANS}`, (i === 0 || i === 6) ? COLORS.accent : COLORS.ink);
+      text(ctx, d.long, r.x + 200, r.y + 32, `400 14px ${SANS}`, COLORS.softInk);
+      ruled(ctx, r.x, r.y + 58, r.w, 1, 40);
+    });
+  }
+
   function planWeekSermon(ctx, o) {
     const P = LJPlanner, ws = P.partsFor(o.weekStart);
     const endIso = P.isoFromTs(Date.UTC(ws.year, ws.month, ws.day) + 6 * P.DAY_MS);
@@ -384,7 +401,7 @@ window.LJTemplates = (function () {
   const DRAW = {
     cover, soap, sermonNotes, prayerList, gratitude, dailyPlanner,
     weeklyTop3, weeklySchedule, monthlyCalendar, notesTasks, lined, dotted, blank,
-    planYear, planMonth, planDay, planWeekSermon
+    planYear, planMonth, planDay, planWeek, planWeekSermon
   };
 
   // Public: draw a template into ctx (already scaled to page units).

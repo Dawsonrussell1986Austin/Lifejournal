@@ -117,10 +117,27 @@ window.LJPlanner = (function () {
     const start = jan1 - new Date(jan1).getUTCDay() * DAY_MS;          // Sunday on/before Jan 1
     const end = dec31 + (6 - new Date(dec31).getUTCDay()) * DAY_MS;     // Saturday on/after Dec 31
     for (let ws = start; ws <= end; ws += 7 * DAY_MS) {
-      pages.push({ id: uid(), template: 'planWeekSermon', weekStart: isoFromTs(ws) });
+      const wIso = isoFromTs(ws);
+      pages.push({ id: uid(), template: 'planWeek', weekStart: wIso });
+      pages.push({ id: uid(), template: 'planWeekSermon', weekStart: wIso });
       for (let i = 0; i < 7; i++) pages.push({ id: uid(), template: 'planDay', date: isoFromTs(ws + i * DAY_MS) });
     }
-    return { id: uid(), title: `LifeJournal ${year}`, cover: 'navy', kind: 'planner', year: year, pages: pages };
+    return { id: uid(), title: `LifeJournal ${year}`, cover: 'navy', kind: 'planner', year: year, pver: 2, pages: pages };
+  }
+
+  // Add a week page before each week's sermon page for planners created before
+  // the week view existed — in place, so existing day/sermon pages (and their
+  // handwriting) are preserved. Returns true if the journal changed.
+  function migrate(journal) {
+    if (journal.kind !== 'planner' || journal.pver >= 2) return false;
+    const out = [];
+    for (const p of journal.pages) {
+      if (p.template === 'planWeekSermon') out.push({ id: LJData.uid(), template: 'planWeek', weekStart: p.weekStart });
+      out.push(p);
+    }
+    journal.pages = out;
+    journal.pver = 2;
+    return true;
   }
 
   return {
@@ -128,6 +145,7 @@ window.LJPlanner = (function () {
     iso, isoFromTs, parseISO, partsFor,
     monthGeom, monthCells, monthCellRects, monthTitleRect,
     yearGeom, yearMonthRects, headerBackRect,
-    generate
+    weekRowGeom, weekDayRects, todayISO,
+    generate, migrate
   };
 })();

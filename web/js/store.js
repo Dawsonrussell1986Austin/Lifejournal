@@ -22,6 +22,9 @@ window.LJStore = (function () {
       lib.journals.unshift(LJPlanner.generate(2026));
       try { localStorage.setItem(PLANNER_FLAG, '1'); } catch (e) {}
     }
+    // Bring older planners up to date (e.g. add week pages) without data loss.
+    let changed = false;
+    if (window.LJPlanner) lib.journals.forEach((j) => { if (LJPlanner.migrate(j)) changed = true; });
     saveLibrary(lib);
     return lib;
   }

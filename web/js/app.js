@@ -215,6 +215,10 @@
     }
     if (page.template === 'planMonth') return `${LJPlanner.MONTHS[page.month]} ${page.year}`;
     if (page.template === 'planYear') return `${page.year} Overview`;
+    if (page.template === 'planWeek' && page.weekStart) {
+      const p = LJPlanner.partsFor(page.weekStart);
+      return `Week of ${p.shortMonthDay}`;
+    }
     if (page.template === 'planWeekSermon' && page.weekStart) {
       const p = LJPlanner.partsFor(page.weekStart);
       return `Sermon · wk ${p.shortMonthDay}`;
@@ -347,6 +351,10 @@
       LJPlanner.monthCellRects(page.year, page.month).forEach((c) => {
         if (c.date) add(c, () => goToDate(c.date), c.date);
       });
+    } else if (page.template === 'planWeek' && page.weekStart) {
+      const p = LJPlanner.parseISO(page.weekStart);
+      add(LJPlanner.headerBackRect(), () => goToMonth(p.m), 'Back to month');
+      LJPlanner.weekDayRects(page.weekStart).forEach((r) => add(r, () => goToDate(r.date), r.date));
     } else if (page.template === 'planDay' && page.date) {
       const p = LJPlanner.parseISO(page.date);
       add(LJPlanner.headerBackRect(), () => goToMonth(p.m), 'Back to month');

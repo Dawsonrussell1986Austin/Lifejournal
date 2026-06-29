@@ -45,6 +45,7 @@ window.LJData = (function () {
     // Planner pages (auto-generated in LifeJournal 2026)
     planYear:        { name: 'Year Overview',            sub: 'The whole year at a glance' },
     planMonth:       { name: 'Month',                    sub: 'Monthly calendar' },
+    planWeek:        { name: 'Week',                     sub: 'A week at a glance' },
     planDay:         { name: 'Daily Page',               sub: 'A dated day' },
     planWeekSermon:  { name: 'Sermon Notes',             sub: 'Weekly sermon notes' }
   };
