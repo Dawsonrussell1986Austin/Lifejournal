@@ -53,6 +53,8 @@
       <div class="tb-title" id="editorTitle">Journal</div>
 
       <div class="tb-group tools">
+        <button id="typeModeBtn" class="tb-btn mode-btn" title="Type mode — keyboard">⌨︎ Type</button>
+        <span class="divider"></span>
         <div class="pen-tools">
           <button class="tb-btn tool active" data-tool="pen" title="Pen">✎</button>
           <button class="tb-btn tool" data-tool="marker" title="Highlighter">▭</button>
@@ -73,6 +75,7 @@
     <div class="canvas-stage" id="stage">
       <div class="page-wrap" id="pageWrap">
         <canvas id="bgCanvas"></canvas>
+        <div id="typeLayer" class="type-layer" spellcheck="false" data-placeholder="Tap and type your note…"></div>
         <canvas id="inkCanvas"></canvas>
         <div id="photoLayer" class="photo-layer"></div>
         <div id="linkLayer" class="link-layer"></div>

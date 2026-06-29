@@ -17,6 +17,8 @@
     njCover: 'sage',
     texts: [],            // text boxes on the current page
     checks: {},           // tapped checkbox state on the current page
+    body: '',             // flowing typed note on the current page
+    mode: 'draw',         // 'draw' | 'type'
     tool: 'pen',
     color: LJData.SWATCH_COLORS[0],
     selectedTextId: null
@@ -164,12 +166,42 @@
     state.canvas.setStrokes(data.strokes);
     state.texts = data.texts || [];
     state.checks = data.checks || {};
+    state.body = data.body || '';
     state.selectedTextId = null;
+    const tl = $('#typeLayer');
+    if (tl) tl.innerText = state.body;
+    layoutTypeLayer();
     renderTextLayer();
     renderLinkLayer();
     renderPhotoLayer();
     renderInteractiveLayer();
     updatePageMeta();
+  }
+
+  function layoutTypeLayer() {
+    const tl = $('#typeLayer');
+    if (!tl || !state.canvas) return;
+    const s = state.canvas.scaleFactor || 1;
+    tl.style.padding = (LJData.PAGE.M * s) + 'px';
+    tl.style.fontSize = (30 * s) + 'px';
+    tl.style.lineHeight = '1.5';
+  }
+
+  function setMode(mode) {
+    state.mode = mode;
+    const tl = $('#typeLayer');
+    const isType = mode === 'type';
+    tl.classList.toggle('typing', isType);
+    tl.contentEditable = isType ? 'true' : 'false';
+    $('#typeModeBtn').classList.toggle('active', isType);
+    if (isType) {
+      $('#inkCanvas').style.pointerEvents = 'none';
+      $('#textLayer').classList.remove('active');
+      tl.focus();
+      toast('Type mode — just start typing');
+    } else {
+      $('#inkCanvas').style.pointerEvents = (state.tool === 'text') ? 'none' : 'auto';
+    }
   }
 
   function updatePageMeta() {
@@ -180,6 +212,7 @@
   function relayout() {
     const stage = $('#stage');
     state.canvas.layout(stage.clientWidth - 44, stage.clientHeight - 44);
+    layoutTypeLayer();
     renderTextLayer(); // reposition text boxes for the new scale
     renderLinkLayer(); // reposition calendar links
     renderPhotoLayer(); // reposition the month photo
@@ -187,7 +220,7 @@
   }
 
   function pageData() {
-    return { strokes: state.canvas ? state.canvas.strokes : [], texts: state.texts, checks: state.checks };
+    return { strokes: state.canvas ? state.canvas.strokes : [], texts: state.texts, checks: state.checks, body: state.body };
   }
   function saveCurrentDebounced() {
     const id = currentPage().id;
@@ -323,6 +356,7 @@
   }
 
   function selectTool(tool) {
+    if (state.mode === 'type') setMode('draw');
     state.tool = tool;
     document.querySelectorAll('.tb-btn.tool').forEach((b) =>
       b.classList.toggle('active', b.dataset.tool === tool));
@@ -704,6 +738,12 @@
       if (state.tool !== 'text' || e.target.id !== 'textLayer') return;
       const p = state.canvas.clientToPage(e.clientX, e.clientY);
       createTextBox(p.x - 10, p.y - 10);
+    });
+
+    $('#typeModeBtn').onclick = () => setMode(state.mode === 'type' ? 'draw' : 'type');
+    $('#typeLayer').addEventListener('input', () => {
+      state.body = $('#typeLayer').innerText;
+      saveCurrentDebounced();
     });
 
     const pencilBtn = $('#pencilOnlyBtn');
