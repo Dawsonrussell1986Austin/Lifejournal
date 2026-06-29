@@ -281,6 +281,100 @@ window.LJTemplates = (function () {
     }
   }
 
+  // ---- LifeJournal 2026 planner pages ----
+  function planYear(ctx, o) {
+    const P = LJPlanner;
+    text(ctx, String(o.year), M, M + 64, `700 56px ${SERIF}`, COLORS.ink);
+    caption(ctx, 'Tap a month to open its calendar.', M, M + 96);
+    P.yearMonthRects().forEach((mr) => drawMiniMonth(ctx, o.year, mr.month, mr));
+  }
+  function drawMiniMonth(ctx, year, month, box) {
+    const P = LJPlanner;
+    text(ctx, P.MONTHS[month], box.x, box.y + 2, `600 16px ${SANS}`, COLORS.accent, 'top');
+    const top = box.y + 30, cellW = box.w / 7, rowH = (box.h - 30) / 7;
+    ctx.textAlign = 'center';
+    for (let c = 0; c < 7; c++) {
+      text(ctx, P.WD_LETTER[c], box.x + c * cellW + cellW / 2, top, `500 9px ${SANS}`, COLORS.softInk, 'top');
+    }
+    const cells = P.monthCells(year, month);
+    for (let i = 0; i < 42; i++) {
+      const cell = cells[i]; if (!cell.day) continue;
+      const c = i % 7, r = Math.floor(i / 7);
+      text(ctx, String(cell.day), box.x + c * cellW + cellW / 2, top + rowH * (r + 1),
+           `400 10px ${SANS}`, (c === 0 || c === 6) ? COLORS.accent : COLORS.ink, 'top');
+    }
+    ctx.textAlign = 'left';
+  }
+
+  function planMonth(ctx, o) {
+    const P = LJPlanner, g = P.monthGeom();
+    label(ctx, P.MONTHS[o.month], M, M + 50, { size: 34, color: COLORS.ink, serif: true, tracking: 0, caps: false });
+    text(ctx, String(o.year), M, M + 92, `400 20px ${SANS}`, COLORS.softInk);
+    caption(ctx, 'Tap a date to open that day · tap the month name for the year.', M, M + 126);
+    ctx.textAlign = 'center'; setLetterSpacing(ctx, 2);
+    for (let c = 0; c < 7; c++) {
+      text(ctx, P.WD_LETTER[c], g.gridLeft + c * g.cellW + g.cellW / 2, g.gridTop + 26,
+           `600 13px ${SANS}`, (c === 0 || c === 6) ? COLORS.accent : COLORS.softInk);
+    }
+    setLetterSpacing(ctx, 0); ctx.textAlign = 'left';
+    ctx.save(); ctx.strokeStyle = COLORS.faint; ctx.lineWidth = 1;
+    P.monthCellRects(o.year, o.month).forEach((c) => {
+      ctx.strokeRect(c.x, c.y, c.w, c.h);
+      if (c.day) text(ctx, String(c.day), c.x + 10, c.y + 8, `600 16px ${SANS}`, COLORS.ink, 'top');
+    });
+    ctx.restore();
+  }
+
+  function planDay(ctx, o) {
+    const P = LJPlanner, d = P.partsFor(o.date);
+    label(ctx, d.weekdayName, M, M + 40, { size: 26, color: COLORS.ink });
+    text(ctx, d.long, M, M + 74, `400 18px ${SANS}`, COLORS.softInk);
+    text(ctx, '‹ ' + d.monthName, W - M - 170, M + 38, `500 15px ${SANS}`, COLORS.accent);
+    hline(ctx, M, M + 96, W - 2 * M, COLORS.rule);
+    const hours = ['6', '7', '8', '9', '10', '11', '12', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+    label(ctx, 'Schedule', M, M + 138, { size: 14 });
+    const schedW = 410;
+    hours.forEach((h, i) => {
+      const y = M + 180 + i * 52;
+      text(ctx, h, M + 24, y, `500 13px ${SANS}`, COLORS.softInk);
+      hline(ctx, M + 44, y, schedW - 44, COLORS.faint);
+    });
+    const rx = M + schedW + 40, rw = W - M - rx;
+    label(ctx, 'Top Priorities', rx, M + 138, { size: 14 });
+    for (let i = 0; i < 3; i++) {
+      const y = M + 180 + i * 56;
+      text(ctx, (i + 1) + '.', rx, y, `600 17px ${SERIF}`, COLORS.softInk);
+      hline(ctx, rx + 30, y, rw - 30, COLORS.faint);
+    }
+    label(ctx, 'Notes / Tasks', rx, M + 382, { size: 14 });
+    for (let i = 0; i < 6; i++) {
+      const y = M + 420 + i * 56;
+      checkbox(ctx, rx, y - 14, 18); hline(ctx, rx + 28, y, rw - 28, COLORS.faint);
+    }
+    label(ctx, "Today's Verse", rx, M + 782, { size: 14 });
+    ruled(ctx, rx, M + 814, rw, 2, 36);
+  }
+
+  function planWeekSermon(ctx, o) {
+    const P = LJPlanner, ws = P.partsFor(o.weekStart);
+    const endIso = P.isoFromTs(Date.UTC(ws.year, ws.month, ws.day) + 6 * P.DAY_MS);
+    const we = P.partsFor(endIso);
+    label(ctx, 'Sermon Notes', M, M + 40, { size: 24, color: COLORS.ink });
+    text(ctx, `Week of ${ws.shortMonthDay} – ${we.shortMonthDay}, ${we.year}`, M, M + 74, `400 16px ${SANS}`, COLORS.softInk);
+    text(ctx, '‹ ' + ws.monthName, W - M - 170, M + 38, `500 15px ${SANS}`, COLORS.accent);
+    hline(ctx, M, M + 94, W - 2 * M, COLORS.rule);
+    const half = (W - 2 * M) / 2 - 20;
+    fieldLine(ctx, 'Speaker', M, M + 138, half, 74);
+    fieldLine(ctx, 'Passage', M + half + 40, M + 138, half, 74);
+    label(ctx, 'Message', M, M + 188, { size: 14 });
+    ruled(ctx, M, M + 216, W - 2 * M, 11, 46);
+    const colW = (W - 2 * M) / 2 - 16;
+    label(ctx, 'Key Verse', M, M + 760, { size: 14, color: COLORS.ink });
+    ruled(ctx, M, M + 790, colW, 2, 36);
+    label(ctx, "How I'll Apply This", M + colW + 32, M + 760, { size: 14, color: COLORS.ink });
+    ruled(ctx, M + colW + 32, M + 790, colW, 2, 36);
+  }
+
   function lined(ctx) { ruled(ctx, M, M + 48, W - 2 * M, 26, 48); }
   function dotted(ctx) {
     for (let y = M; y < H - M; y += 42) for (let x = M; x < W - M; x += 42) dot(ctx, x, y, 1.4, COLORS.rule);
@@ -289,7 +383,8 @@ window.LJTemplates = (function () {
 
   const DRAW = {
     cover, soap, sermonNotes, prayerList, gratitude, dailyPlanner,
-    weeklyTop3, weeklySchedule, monthlyCalendar, notesTasks, lined, dotted, blank
+    weeklyTop3, weeklySchedule, monthlyCalendar, notesTasks, lined, dotted, blank,
+    planYear, planMonth, planDay, planWeekSermon
   };
 
   // Public: draw a template into ctx (already scaled to page units).

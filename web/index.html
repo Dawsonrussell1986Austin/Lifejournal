@@ -40,6 +40,7 @@
         <div class="pen-tools">
           <button class="tb-btn tool active" data-tool="pen" title="Pen">✎</button>
           <button class="tb-btn tool" data-tool="marker" title="Highlighter">▭</button>
+          <button class="tb-btn tool" data-tool="text" title="Type text">T</button>
           <button class="tb-btn tool" data-tool="eraser" title="Eraser">⌫</button>
         </div>
         <div class="swatches" id="swatches"></div>
@@ -57,6 +58,8 @@
       <div class="page-wrap" id="pageWrap">
         <canvas id="bgCanvas"></canvas>
         <canvas id="inkCanvas"></canvas>
+        <div id="linkLayer" class="link-layer"></div>
+        <div id="textLayer" class="text-layer"></div>
       </div>
     </div>
   </section>
@@ -93,6 +96,7 @@
 
   <script src="js/data.js"></script>
   <script src="js/templates.js"></script>
+  <script src="js/planner.js"></script>
   <script src="js/store.js"></script>
   <script src="js/canvas.js"></script>
   <script src="js/pdf.js"></script>

@@ -41,7 +41,12 @@ window.LJData = (function () {
     notesTasks:      { name: 'Notes / Tasks',            sub: 'Open notes with a task column' },
     lined:           { name: 'Lined',                    sub: 'Ruled writing lines' },
     dotted:          { name: 'Dotted',                   sub: 'Dot grid for free-form layout' },
-    blank:           { name: 'Blank',                    sub: 'A clean blank page' }
+    blank:           { name: 'Blank',                    sub: 'A clean blank page' },
+    // Planner pages (auto-generated in LifeJournal 2026)
+    planYear:        { name: 'Year Overview',            sub: 'The whole year at a glance' },
+    planMonth:       { name: 'Month',                    sub: 'Monthly calendar' },
+    planDay:         { name: 'Daily Page',               sub: 'A dated day' },
+    planWeekSermon:  { name: 'Sermon Notes',             sub: 'Weekly sermon notes' }
   };
 
   const INSERTABLE = [

@@ -14,7 +14,11 @@
     pageIndex: 0,
     canvas: null,
     saveTimer: null,
-    njCover: 'sage'
+    njCover: 'sage',
+    texts: [],            // text boxes on the current page
+    tool: 'pen',
+    color: LJData.SWATCH_COLORS[0],
+    selectedTextId: null
   };
 
   // ---------- Library ----------
@@ -50,7 +54,7 @@
   function deleteJournal(id) {
     if (!confirm('Delete this journal and all of its pages?')) return;
     const j = state.lib.journals.find((x) => x.id === id);
-    if (j) j.pages.forEach((p) => LJStore.deleteStrokes(p.id));
+    if (j) j.pages.forEach((p) => LJStore.deletePage(p.id));
     state.lib.journals = state.lib.journals.filter((x) => x.id !== id);
     LJStore.saveLibrary(state.lib);
     renderShelf();
@@ -101,16 +105,30 @@
   }
 
   // ---------- Editor ----------
+  function buildPlannerIndex() {
+    state.dateIndex = {}; state.monthIndex = {}; state.yearPageIndex = -1;
+    if (!state.journal) return;
+    state.journal.pages.forEach((p, i) => {
+      if (p.date) state.dateIndex[p.date] = i;
+      if (p.template === 'planMonth') state.monthIndex[p.month] = i;
+      if (p.template === 'planYear') state.yearPageIndex = i;
+    });
+  }
+  function goToDate(ds) { const i = state.dateIndex[ds]; if (i != null) loadPage(i); }
+  function goToMonth(m) { const i = state.monthIndex[m]; if (i != null) loadPage(i); }
+  function goToYear() { if (state.yearPageIndex >= 0) loadPage(state.yearPageIndex); }
+
   function openJournal(id) {
     state.journal = state.lib.journals.find((x) => x.id === id);
     if (!state.journal) return;
+    buildPlannerIndex();
     state.pageIndex = 0;
     $('#library').classList.add('hidden');
     $('#editor').classList.remove('hidden');
     $('#editorTitle').textContent = state.journal.title;
     if (!state.canvas) {
       state.canvas = new JournalCanvas($('#bgCanvas'), $('#inkCanvas'), $('#pageWrap'));
-      state.canvas.onChange = (strokes) => scheduleSave(strokes);
+      state.canvas.onChange = () => saveCurrentDebounced();
     }
     loadPage(0);
     requestAnimationFrame(relayout);
@@ -129,8 +147,13 @@
     flushSave();
     state.pageIndex = Math.max(0, Math.min(i, state.journal.pages.length - 1));
     const page = currentPage();
-    state.canvas.setTemplate(page.template, { title: state.journal.title, cover: state.journal.cover });
-    state.canvas.setStrokes(LJStore.loadStrokes(page.id));
+    const data = LJStore.loadPageData(page.id);
+    state.canvas.setTemplate(page.template, JournalCanvas.templateOpts(page, state.journal));
+    state.canvas.setStrokes(data.strokes);
+    state.texts = data.texts || [];
+    state.selectedTextId = null;
+    renderTextLayer();
+    renderLinkLayer();
     updatePageMeta();
   }
 
@@ -142,17 +165,22 @@
   function relayout() {
     const stage = $('#stage');
     state.canvas.layout(stage.clientWidth - 44, stage.clientHeight - 44);
+    renderTextLayer(); // reposition text boxes for the new scale
+    renderLinkLayer(); // reposition calendar links
   }
 
-  function scheduleSave(strokes) {
+  function pageData() {
+    return { strokes: state.canvas ? state.canvas.strokes : [], texts: state.texts };
+  }
+  function saveCurrentDebounced() {
     const id = currentPage().id;
     clearTimeout(state.saveTimer);
-    state.saveTimer = setTimeout(() => LJStore.saveStrokes(id, strokes), 500);
+    state.saveTimer = setTimeout(() => LJStore.savePageData(id, pageData()), 500);
   }
   function flushSave() {
     if (!state.canvas || !state.journal) return;
     clearTimeout(state.saveTimer);
-    LJStore.saveStrokes(currentPage().id, state.canvas.strokes);
+    LJStore.savePageData(currentPage().id, pageData());
   }
 
   function addPage(template) {
@@ -166,25 +194,59 @@
     if (state.journal.pages.length <= 1) return;
     if (!confirm('Delete this page? Handwriting on it will be removed.')) return;
     const page = currentPage();
-    LJStore.deleteStrokes(page.id);
+    LJStore.deletePage(page.id);
     state.journal.pages.splice(state.pageIndex, 1);
     LJStore.saveLibrary(state.lib);
     loadPage(Math.min(state.pageIndex, state.journal.pages.length - 1));
   }
 
   // ---------- Picker modal (pages overview + add-template) ----------
+  function pageLabel(page, i) {
+    if (page.template === 'planDay' && page.date) {
+      const p = LJPlanner.partsFor(page.date);
+      return `${p.shortMonthDay} · ${p.weekdayName.slice(0, 3)}`;
+    }
+    if (page.template === 'planMonth') return `${LJPlanner.MONTHS[page.month]} ${page.year}`;
+    if (page.template === 'planYear') return `${page.year} Overview`;
+    if (page.template === 'planWeekSermon' && page.weekStart) {
+      const p = LJPlanner.partsFor(page.weekStart);
+      return `Sermon · wk ${p.shortMonthDay}`;
+    }
+    return `${i + 1} · ${(LJData.TEMPLATES[page.template] || {}).name || 'Page'}`;
+  }
+
   function openPagesView() {
     const grid = $('#pickerGrid');
-    $('#pickerTitle').textContent = 'Pages';
+    $('#pickerTitle').textContent = `Pages (${state.journal.pages.length})`;
     grid.innerHTML = '';
+
+    // Lazy-render thumbnails so large planners (hundreds of pages) stay smooth.
+    const ratio = LJData.PAGE.H / LJData.PAGE.W;
+    const io = new IntersectionObserver((entries, obs) => {
+      entries.forEach((en) => {
+        if (!en.isIntersecting) return;
+        const item = en.target;
+        const idx = Number(item.dataset.index);
+        const page = state.journal.pages[idx];
+        const c = JournalCanvas.renderPageCanvas(page, state.journal, 0.26);
+        c.style.width = '100%'; c.style.height = 'auto';
+        item.insertBefore(c, item.firstChild);
+        const ph = item.querySelector('.thumb-ph');
+        if (ph) ph.remove();
+        obs.unobserve(item);
+      });
+    }, { root: grid, rootMargin: '300px' });
+
     state.journal.pages.forEach((page, i) => {
       const item = el('div', 'picker-item' + (i === state.pageIndex ? ' current' : ''));
-      const c = JournalCanvas.renderPageCanvas(page, state.journal, 0.3);
-      c.style.width = '100%'; c.style.height = 'auto';
-      item.appendChild(c);
-      item.appendChild(el('div', 'p-name', `${i + 1} · ${LJData.TEMPLATES[page.template].name}`));
+      item.dataset.index = i;
+      const ph = el('div', 'thumb-ph');
+      ph.style.paddingBottom = (ratio * 100) + '%';
+      item.appendChild(ph);
+      item.appendChild(el('div', 'p-name', pageLabel(page, i)));
       item.onclick = () => { closePicker(); loadPage(i); };
       grid.appendChild(item);
+      io.observe(item);
     });
     $('#pickerModal').classList.remove('hidden');
   }
@@ -219,18 +281,176 @@
       sw.onclick = () => {
         box.querySelectorAll('.swatch').forEach((n) => n.classList.remove('active'));
         sw.classList.add('active');
+        state.color = color;
         state.canvas.setColor(color);
-        // picking a color implies the pen
-        selectTool('pen');
+        if (state.tool === 'text' && state.selectedTextId) {
+          // recolor the selected text box without switching tools
+          const t = state.texts.find((x) => x.id === state.selectedTextId);
+          if (t) {
+            t.color = color;
+            const b = document.querySelector(`#textLayer [data-id="${t.id}"] .lj-textbox`);
+            if (b) b.style.color = color;
+            saveCurrentDebounced();
+          }
+        } else if (state.tool !== 'text') {
+          // picking a color implies the pen
+          selectTool('pen');
+        }
       };
       box.appendChild(sw);
     });
   }
 
   function selectTool(tool) {
+    state.tool = tool;
     document.querySelectorAll('.tb-btn.tool').forEach((b) =>
       b.classList.toggle('active', b.dataset.tool === tool));
     if (state.canvas) state.canvas.setTool(tool);
+    const isText = tool === 'text';
+    const layer = $('#textLayer');
+    if (layer) layer.classList.toggle('active', isText);
+    $('#inkCanvas').style.pointerEvents = isText ? 'none' : 'auto';
+    if (isText) toast('Text tool — tap the page to type'); else deselectText();
+  }
+
+  // ---------- Calendar links ----------
+  function renderLinkLayer() {
+    const layer = $('#linkLayer');
+    if (!layer) return;
+    layer.innerHTML = '';
+    const page = currentPage();
+    if (!page) return;
+    const s = (state.canvas && state.canvas.scaleFactor) || 1;
+    const add = (rect, onClick, title) => {
+      const b = el('div', 'lj-link');
+      b.style.left = (rect.x * s) + 'px';
+      b.style.top = (rect.y * s) + 'px';
+      b.style.width = (rect.w * s) + 'px';
+      b.style.height = (rect.h * s) + 'px';
+      if (title) b.title = title;
+      b.addEventListener('click', onClick);
+      layer.appendChild(b);
+    };
+
+    if (page.template === 'planYear') {
+      LJPlanner.yearMonthRects().forEach((mr) =>
+        add(mr, () => goToMonth(mr.month), LJPlanner.MONTHS[mr.month]));
+    } else if (page.template === 'planMonth') {
+      add(LJPlanner.monthTitleRect(), goToYear, 'Year overview');
+      LJPlanner.monthCellRects(page.year, page.month).forEach((c) => {
+        if (c.date) add(c, () => goToDate(c.date), c.date);
+      });
+    } else if (page.template === 'planDay' && page.date) {
+      const p = LJPlanner.parseISO(page.date);
+      add(LJPlanner.headerBackRect(), () => goToMonth(p.m), 'Back to month');
+    } else if (page.template === 'planWeekSermon' && page.weekStart) {
+      const p = LJPlanner.parseISO(page.weekStart);
+      add(LJPlanner.headerBackRect(), () => goToMonth(p.m), 'Back to month');
+    }
+  }
+
+  // ---------- Text boxes ----------
+  function textSize(v) { return Math.round(18 + v * 3.4); }
+
+  function renderTextLayer() {
+    const layer = $('#textLayer');
+    if (!layer) return;
+    layer.innerHTML = '';
+    const s = (state.canvas && state.canvas.scaleFactor) || 1;
+    state.texts.forEach((t) => layer.appendChild(buildTextBox(t, s)));
+  }
+
+  function buildTextBox(t, s) {
+    const wrap = el('div', 'lj-textbox-wrap' + (t.id === state.selectedTextId ? ' selected' : ''));
+    wrap.style.left = (t.x * s) + 'px';
+    wrap.style.top = (t.y * s) + 'px';
+    wrap.style.width = (t.w * s) + 'px';
+    wrap.dataset.id = t.id;
+
+    const tools = el('div', 'lj-tb-tools');
+    const move = el('button', 'lj-tb-btn lj-tb-move', '✥'); move.title = 'Drag to move';
+    const del = el('button', 'lj-tb-btn', '🗑'); del.title = 'Delete';
+    tools.appendChild(move); tools.appendChild(del);
+
+    const box = el('div', 'lj-textbox');
+    box.contentEditable = 'true';
+    box.setAttribute('data-placeholder', 'Type…');
+    box.style.fontSize = (t.size * s) + 'px';
+    box.style.color = t.color || '#1f2330';
+    box.textContent = t.text || '';
+
+    box.addEventListener('input', () => { t.text = box.innerText; saveCurrentDebounced(); });
+    box.addEventListener('focus', () => selectText(t.id));
+    box.addEventListener('blur', () => {
+      t.text = box.innerText;
+      if (!t.text.trim()) removeText(t.id);
+      else saveCurrentDebounced();
+    });
+    // Don't let clicks on an existing box bubble up and create a new one.
+    wrap.addEventListener('pointerdown', (e) => e.stopPropagation());
+
+    del.addEventListener('pointerdown', (e) => e.stopPropagation());
+    del.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); removeText(t.id); });
+    attachMove(move, wrap, t);
+
+    wrap.appendChild(tools);
+    wrap.appendChild(box);
+    return wrap;
+  }
+
+  function attachMove(handle, wrap, t) {
+    handle.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      selectText(t.id);
+      const s = (state.canvas && state.canvas.scaleFactor) || 1;
+      const startX = e.clientX, startY = e.clientY, ox = t.x, oy = t.y;
+      const mv = (ev) => {
+        t.x = Math.max(0, ox + (ev.clientX - startX) / s);
+        t.y = Math.max(0, oy + (ev.clientY - startY) / s);
+        wrap.style.left = (t.x * s) + 'px';
+        wrap.style.top = (t.y * s) + 'px';
+      };
+      const up = () => {
+        document.removeEventListener('pointermove', mv);
+        document.removeEventListener('pointerup', up);
+        saveCurrentDebounced();
+      };
+      document.addEventListener('pointermove', mv);
+      document.addEventListener('pointerup', up);
+    });
+  }
+
+  function createTextBox(px, py) {
+    const t = {
+      id: LJData.uid(),
+      x: Math.max(0, Math.min(px, LJData.PAGE.W - 380)),
+      y: Math.max(0, py),
+      w: 380,
+      size: textSize(parseFloat($('#widthRange').value)),
+      color: state.color,
+      text: ''
+    };
+    state.texts.push(t);
+    renderTextLayer();
+    const box = document.querySelector(`#textLayer [data-id="${t.id}"] .lj-textbox`);
+    if (box) { selectText(t.id); box.focus(); }
+  }
+
+  function selectText(id) {
+    state.selectedTextId = id;
+    document.querySelectorAll('#textLayer .lj-textbox-wrap').forEach((w) =>
+      w.classList.toggle('selected', w.dataset.id === id));
+  }
+  function deselectText() {
+    state.selectedTextId = null;
+    document.querySelectorAll('#textLayer .lj-textbox-wrap.selected')
+      .forEach((w) => w.classList.remove('selected'));
+  }
+  function removeText(id) {
+    state.texts = state.texts.filter((t) => t.id !== id);
+    if (state.selectedTextId === id) state.selectedTextId = null;
+    renderTextLayer();
+    saveCurrentDebounced();
   }
 
   function toast(msg) {
@@ -268,7 +488,29 @@
       b.onclick = () => selectTool(b.dataset.tool);
     });
 
-    $('#widthRange').oninput = (e) => state.canvas && state.canvas.setWidth(parseFloat(e.target.value));
+    $('#widthRange').oninput = (e) => {
+      const v = parseFloat(e.target.value);
+      if (state.canvas) state.canvas.setWidth(v);
+      if (state.tool === 'text' && state.selectedTextId) {
+        const t = state.texts.find((x) => x.id === state.selectedTextId);
+        if (t) {
+          t.size = textSize(v);
+          const b = document.querySelector(`#textLayer [data-id="${t.id}"] .lj-textbox`);
+          const s = (state.canvas && state.canvas.scaleFactor) || 1;
+          if (b) b.style.fontSize = (t.size * s) + 'px';
+          saveCurrentDebounced();
+        }
+      }
+    };
+
+    // Text tool: tap an empty spot on the page to start a new text box.
+    // Use 'click' (end of the tap) so the same gesture's mouseup doesn't blur
+    // and discard the freshly-created empty box before the user can type.
+    $('#textLayer').addEventListener('click', (e) => {
+      if (state.tool !== 'text' || e.target.id !== 'textLayer') return;
+      const p = state.canvas.clientToPage(e.clientX, e.clientY);
+      createTextBox(p.x - 10, p.y - 10);
+    });
 
     const pencilBtn = $('#pencilOnlyBtn');
     pencilBtn.onclick = () => {
@@ -280,6 +522,8 @@
 
     $('#exportBtn').onclick = async () => {
       flushSave();
+      const n = state.journal.pages.length;
+      if (n > 60 && !confirm(`This journal has ${n} pages. Building one PDF may take a while and produce a large file. Continue?`)) return;
       toast('Building PDF…');
       try { await LJPDF.exportJournal(state.journal); }
       catch (err) { toast('PDF export failed — ' + err.message); }

@@ -39,6 +39,7 @@ window.JournalCanvas = (function () {
       const scale = Math.min((stageW - pad) / PAGE.W, (stageH - pad) / PAGE.H);
       const cssW = Math.max(1, Math.floor(PAGE.W * scale));
       const cssH = Math.max(1, Math.floor(PAGE.H * scale));
+      this.scaleFactor = cssW / PAGE.W; // CSS px per page unit (for the text layer)
       const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
       this.wrap.style.width = cssW + 'px';
       this.wrap.style.height = cssH + 'px';
@@ -131,7 +132,19 @@ window.JournalCanvas = (function () {
       };
     }
 
+    // Map a client point to page units (used by the text layer).
+    clientToPage(clientX, clientY) {
+      const r = this.ink.getBoundingClientRect();
+      return {
+        x: (clientX - r.left) / r.width * PAGE.W,
+        y: (clientY - r.top) / r.height * PAGE.H
+      };
+    }
+
+    _isDrawingTool() { return this.tool === 'pen' || this.tool === 'marker' || this.tool === 'eraser'; }
+
     _down(e) {
+      if (!this._isDrawingTool()) return; // Text tool is handled by the DOM layer
       if (this._shouldIgnore(e)) return;
       e.preventDefault();
       this.activePointer = e.pointerId;
@@ -231,6 +244,42 @@ window.JournalCanvas = (function () {
     }
   }
 
+  // Draw text boxes onto a canvas (for thumbnails / PDF export).
+  function drawTexts(ctx, texts) {
+    const SANS = '-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif';
+    for (const t of texts || []) {
+      if (!t.text) continue;
+      ctx.save();
+      ctx.fillStyle = t.color || '#1f2330';
+      ctx.font = `400 ${t.size}px ${SANS}`;
+      ctx.textBaseline = 'top';
+      const pad = t.size * 0.22;
+      const lineH = t.size * 1.3;
+      let y = t.y + pad;
+      const maxW = t.w - pad * 2;
+      String(t.text).split('\n').forEach((para) => {
+        const words = para.split(' ');
+        let line = '';
+        for (const w of words) {
+          const test = line ? line + ' ' + w : w;
+          if (ctx.measureText(test).width > maxW && line) {
+            ctx.fillText(line, t.x + pad, y); y += lineH; line = w;
+          } else line = test;
+        }
+        ctx.fillText(line, t.x + pad, y); y += lineH;
+      });
+      ctx.restore();
+    }
+  }
+
+  // Build the draw options for a page (cover context + planner date fields).
+  function templateOpts(page, journal) {
+    return {
+      title: journal.title, cover: journal.cover,
+      year: page.year, month: page.month, date: page.date, weekStart: page.weekStart
+    };
+  }
+
   // Stand-alone helper to render any page (used for thumbnails / export).
   function renderPageCanvas(page, journal, scale) {
     const out = document.createElement('canvas');
@@ -239,13 +288,16 @@ window.JournalCanvas = (function () {
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     ctx.scale(scale, scale);
     ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, PAGE.W, PAGE.H);
-    LJTemplates.draw(ctx, page.template, { title: journal.title, cover: journal.cover });
-    const strokes = LJStore.loadStrokes(page.id);
+    LJTemplates.draw(ctx, page.template, templateOpts(page, journal));
+    const data = LJStore.loadPageData(page.id);
     const jc = JournalCanvas.prototype;
-    for (const s of strokes) jc._drawStroke.call({ _segWidth: jc._segWidth }, ctx, s);
+    for (const s of data.strokes) jc._drawStroke.call({ _segWidth: jc._segWidth }, ctx, s);
+    drawTexts(ctx, data.texts);
     return out;
   }
 
   JournalCanvas.renderPageCanvas = renderPageCanvas;
+  JournalCanvas.drawTexts = drawTexts;
+  JournalCanvas.templateOpts = templateOpts;
   return JournalCanvas;
 })();
