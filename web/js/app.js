@@ -26,26 +26,30 @@
     const shelf = $('#shelf');
     shelf.innerHTML = '';
 
-    const add = el('div', 'journal-tile new-tile');
-    add.innerHTML = `<div class="cover"><div class="plus">+</div><div class="lbl">New Journal</div></div><div class="tile-meta">&nbsp;</div>`;
+    const add = el('div', 'journal-tile');
+    add.innerHTML = `<div class="jcard new-card">
+        <div class="jcard-icon plus-icon">+</div>
+        <div class="jcard-title">New Journal</div>
+        <div class="jcard-count">Start writing</div>
+      </div>`;
     add.onclick = openNewJournal;
     shelf.appendChild(add);
 
     state.lib.journals.forEach((j) => {
-      const tile = el('div', 'journal-tile');
       const cv = LJData.COVERS[j.cover] || LJData.COVERS.sage;
-      const cover = el('div', 'cover');
-      cover.style.background = `linear-gradient(135deg, ${cv.c1}, ${cv.c2})`;
-      cover.style.color = cv.foil;
-      cover.innerHTML = `<div class="c-cross">✝</div><div class="c-title">${escapeHtml(j.title)}</div><div class="c-rule"></div>`;
-      tile.appendChild(cover);
-      const meta = el('div', 'tile-meta');
-      meta.innerHTML = `<span>${j.pages.length} page${j.pages.length === 1 ? '' : 's'}</span>`;
-      const del = el('button', 'tile-del', '🗑');
-      del.title = 'Delete journal';
-      del.onclick = (e) => { e.stopPropagation(); deleteJournal(j.id); };
-      meta.appendChild(del);
-      tile.appendChild(meta);
+      const chip = j.kind === 'planner' ? 'Calendar' : cv.name;
+      const tile = el('div', 'journal-tile');
+      const accent = cv.vivid || cv.c1;
+      tile.innerHTML = `<div class="jcard" style="--c:${accent}">
+          <div class="jcard-top">
+            <div class="jcard-icon" style="background:${accent}">✝</div>
+            <button class="jcard-del" title="Delete journal">🗑</button>
+          </div>
+          <span class="jcard-chip">${chip}</span>
+          <div class="jcard-title">${escapeHtml(j.title)}</div>
+          <div class="jcard-count">${j.pages.length} page${j.pages.length === 1 ? '' : 's'}</div>
+        </div>`;
+      tile.querySelector('.jcard-del').onclick = (e) => { e.stopPropagation(); deleteJournal(j.id); };
       tile.onclick = () => openJournal(j.id);
       shelf.appendChild(tile);
     });
@@ -531,6 +535,9 @@
     $('#syncClose').onclick = () => $('#syncModal').classList.add('hidden');
     $('#syncUpload').onclick = () => doSync('upload');
     $('#syncDownload').onclick = () => doSync('download');
+    $('#dockNew').onclick = openNewJournal;
+    $('#dockSync').onclick = openSync;
+    $('#dockHome').onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
     $('#njCancel').onclick = () => $('#newJournalModal').classList.add('hidden');
     $('#njCreate').onclick = createJournal;
 

@@ -13,17 +13,17 @@ window.LJData = (function () {
 
   // Cover themes: gradient stops, foil (lettering), and an opening verse.
   const COVERS = {
-    sage:       { name: 'Sage',       c1: '#4a5f50', c2: '#607967', foil: '#f4f1e8',
+    sage:       { name: 'Sage',       c1: '#4a5f50', c2: '#607967', foil: '#f4f1e8', vivid: '#3aa675',
                   verse: '“This is the day the Lord has made; let us rejoice and be glad in it.”  — Psalm 118:24' },
-    navy:       { name: 'Navy',       c1: '#1f2e44', c2: '#2a3d5c', foil: '#eef1f6',
+    navy:       { name: 'Navy',       c1: '#1f2e44', c2: '#2a3d5c', foil: '#eef1f6', vivid: '#3b82f6',
                   verse: '“Your word is a lamp to my feet and a light to my path.”  — Psalm 119:105' },
-    terracotta: { name: 'Terracotta', c1: '#a85c46', c2: '#bd6e57', foil: '#fbeee7',
+    terracotta: { name: 'Terracotta', c1: '#a85c46', c2: '#bd6e57', foil: '#fbeee7', vivid: '#ef8a4c',
                   verse: '“For I know the plans I have for you, declares the Lord.”  — Jeremiah 29:11' },
-    plum:       { name: 'Plum',       c1: '#56395b', c2: '#66476b', foil: '#f3edf0',
+    plum:       { name: 'Plum',       c1: '#56395b', c2: '#66476b', foil: '#f3edf0', vivid: '#c25ad6',
                   verse: '“Be still, and know that I am God.”  — Psalm 46:10' },
-    charcoal:   { name: 'Charcoal',   c1: '#2c2f36', c2: '#383d45', foil: '#eef0f2',
+    charcoal:   { name: 'Charcoal',   c1: '#2c2f36', c2: '#383d45', foil: '#eef0f2', vivid: '#64748b',
                   verse: '“His mercies are new every morning.”  — Lamentations 3:22–23' },
-    gold:       { name: 'Gold',       c1: '#9a7a37', c2: '#b38f45', foil: '#f8e9bd',
+    gold:       { name: 'Gold',       c1: '#9a7a37', c2: '#b38f45', foil: '#f8e9bd', vivid: '#e0a93b',
                   verse: '“Trust in the Lord with all your heart.”  — Proverbs 3:5' }
   };
 
