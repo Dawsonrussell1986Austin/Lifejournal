@@ -382,13 +382,13 @@ window.LJTemplates = (function () {
     return {
       rx, rw, schedLineX: M + 42, schedRight: M + 406,
       thankY: M + 58, thankGap: 28, thankRows: 2, thankW: (W - 2 * M) / 2,
-      schedLabelY: M + 124, schedTop: M + 168, schedRowH: 44,
+      schedLabelY: M + 124, schedTop: M + 168, schedRowH: 42,
       top3Y: M + 160, top3Gap: 42,
       scr: { y: M + 320, d: [M + 368, M + 402] },
       obs: { y: M + 430, d: [M + 478, M + 512] },
       gos: { y: M + 540, d: [M + 588, M + 622] },
-      stepsY: M + 710, stepsGap: 34,
-      jrnLabelY: M + 894, jrnTop: M + 930, jrnGap: 36, jrnRows: 7
+      stepsY: M + 700, stepsGap: 34,
+      jrnLabelY: M + 904, jrnTop: M + 940, jrnGap: 36, jrnRows: 7
     };
   }
   function dailyChecks() {
