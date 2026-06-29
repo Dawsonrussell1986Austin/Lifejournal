@@ -404,13 +404,25 @@ window.LJTemplates = (function () {
     planYear, planMonth, planDay, planWeek, planWeekSermon
   };
 
+  // Mix a hex color toward white by `amt` (0..1). Used for the soft paper tint.
+  function lighten(hex, amt) {
+    const n = parseInt(hex.slice(1), 16);
+    const r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+    const m = (c) => Math.round(c + (255 - c) * amt);
+    return `rgb(${m(r)},${m(g)},${m(b)})`;
+  }
+
   // Public: draw a template into ctx (already scaled to page units).
   function draw(ctx, type, opts) {
+    opts = opts || {};
     ctx.save();
-    ctx.fillStyle = COLORS.paper;
+    // Soft pastel paper tinted toward the journal's color (very light so ink
+    // stays legible). Cover/blank keep their own background.
+    const tinted = opts.tint && type !== 'cover' && type !== 'blank';
+    ctx.fillStyle = tinted ? lighten(opts.tint, 0.955) : COLORS.paper;
     ctx.fillRect(0, 0, W, H);
     ctx.textAlign = 'left';
-    (DRAW[type] || blank)(ctx, opts || {});
+    (DRAW[type] || blank)(ctx, opts);
     ctx.restore();
   }
 

@@ -274,8 +274,9 @@ window.JournalCanvas = (function () {
 
   // Build the draw options for a page (cover context + planner date fields).
   function templateOpts(page, journal) {
+    const cv = LJData.COVERS[journal.cover] || LJData.COVERS.sage;
     return {
-      title: journal.title, cover: journal.cover,
+      title: journal.title, cover: journal.cover, tint: cv.vivid || cv.c1,
       year: page.year, month: page.month, date: page.date, weekStart: page.weekStart
     };
   }

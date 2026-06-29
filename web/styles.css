@@ -255,3 +255,12 @@ body { background: var(--shelf); }
 .today-btn { color: #fff; border-color: rgba(255, 255, 255, 0.25); }
 .today-btn:hover { background: rgba(255, 255, 255, 0.12); }
 #editor { background: #eceef1; }
+
+/* Polish: cleaner header, rounder modals/buttons */
+.header-actions { display: none; }            /* New + Sync live in the dock now */
+.lib-header { padding: 24px 28px 8px; }
+.btn { border-radius: 12px; }
+.text-input { border-radius: 12px; }
+.modal-card { border-radius: 22px; padding: 26px; }
+.picker-item canvas, .picker-item .thumb-ph { border-radius: 12px; }
+.cover-swatch { border-radius: 12px; }
