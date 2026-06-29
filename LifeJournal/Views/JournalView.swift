@@ -1,5 +1,6 @@
 import SwiftUI
 import PencilKit
+import UIKit
 
 /// Full-screen journal editor: a page canvas with the Apple Pencil tool picker,
 /// plus chrome for navigating, adding and deleting pages.
@@ -17,6 +18,8 @@ struct JournalView: View {
     @State private var showTemplatePicker = false
     @State private var showThumbnails = false
     @State private var pageToDelete: JournalPage?
+    @State private var exportedPDF: ExportedPDF?
+    @State private var isExporting = false
 
     private var journal: Journal? { store.journal(journalID) }
     private var pages: [JournalPage] { journal?.pages ?? [] }
@@ -53,6 +56,20 @@ struct JournalView: View {
                 primaryButton: .destructive(Text("Delete")) { deletePage(page) },
                 secondaryButton: .cancel()
             )
+        }
+        .sheet(item: $exportedPDF) { pdf in
+            ShareSheet(items: [pdf.url])
+        }
+    }
+
+    private func exportPDF() {
+        guard let journal else { return }
+        flushSave()
+        isExporting = true
+        // Defer a tick so the spinner shows before the (synchronous) render.
+        DispatchQueue.main.async {
+            exportedPDF = PDFExporter.export(journal: journal, store: store)
+            isExporting = false
         }
     }
 
@@ -129,6 +146,11 @@ struct JournalView: View {
             }
 
             Menu {
+                Button {
+                    exportPDF()
+                } label: {
+                    Label("Export Journal as PDF", systemImage: "square.and.arrow.up")
+                }
                 Button(role: .destructive) {
                     if let page = currentPage { pageToDelete = page }
                 } label: {
@@ -136,7 +158,11 @@ struct JournalView: View {
                 }
                 .disabled(pages.count <= 1)
             } label: {
-                Image(systemName: "ellipsis.circle")
+                if isExporting {
+                    ProgressView()
+                } else {
+                    Image(systemName: "ellipsis.circle")
+                }
             }
         }
         .font(.system(size: 18))
@@ -202,14 +228,7 @@ struct JournalView: View {
     // MARK: - Template rendering
 
     private func renderTemplate(for page: JournalPage) -> UIImage? {
-        let view = TemplateBackground(
-            template: page.template,
-            coverTitle: journal?.title ?? "Life Journal",
-            coverScripture: journal?.cover.scripture ?? "",
-            coverStyle: journal?.cover ?? .sage
-        )
-        let renderer = ImageRenderer(content: view)
-        renderer.scale = UIScreen.main.scale
-        return renderer.uiImage
+        guard let journal else { return nil }
+        return TemplateRenderer.templateImage(for: page, in: journal, scale: UIScreen.main.scale)
     }
 }

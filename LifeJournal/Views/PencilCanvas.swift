@@ -1,5 +1,6 @@
 import SwiftUI
 import PencilKit
+import UIKit
 
 /// SwiftUI wrapper around a zoomable PencilKit canvas with a template image
 /// behind the ink. This is what gives the GoodNotes-style writing experience:

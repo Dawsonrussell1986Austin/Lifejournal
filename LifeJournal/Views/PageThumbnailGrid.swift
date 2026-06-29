@@ -1,5 +1,6 @@
 import SwiftUI
 import PencilKit
+import UIKit
 
 /// A grid of every page in the journal (template + handwriting) for quick
 /// navigation, shown as a sheet.

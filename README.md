@@ -30,6 +30,13 @@ pressure, tilt, palm rejection, low-latency ink, the system tool picker
 - **Pencil-only by default** with a one-tap toggle to also allow finger drawing.
 - **Pinch to zoom** the page while writing; the template scrolls and zooms with
   the ink.
+- **Export to PDF** — turn a whole journal (templates + handwriting) into a
+  multi-page PDF and share/save it via the system share sheet. Available from
+  the editor's ••• menu and by long-pressing a journal on the shelf.
+- **iCloud sync** — when you're signed into iCloud, journals and handwriting are
+  stored in the app's iCloud Documents container and sync across your iPads
+  automatically. A cloud badge appears in the library when sync is active; the
+  app falls back to on-device storage when iCloud is unavailable.
 
 ## Project layout
 
@@ -45,6 +52,7 @@ LifeJournal/
   Templates/
     TemplateComponents.swift    Reusable rule/checkbox/field building blocks
     TemplateBackground.swift    The printed layout for every template
+    TemplateRenderer.swift      Rasterize templates/pages to images (editor, PDF)
   Views/
     LibraryView.swift           The shelf
     JournalCoverView.swift      Book-cover thumbnail
@@ -53,6 +61,8 @@ LifeJournal/
     PencilCanvas.swift          PencilKit canvas (UIViewControllerRepresentable)
     TemplatePickerSheet.swift   Add-a-page picker with live previews
     PageThumbnailGrid.swift     All pages at a glance
+    Export.swift                PDF export + share sheet
+  LifeJournal.entitlements     iCloud Documents capability
   Assets.xcassets/             App icon + accent color
 ```
 
@@ -67,6 +77,22 @@ This is a native iPadOS app, so it builds on a Mac with Xcode.
 4. Apple Pencil works on a physical iPad; in the Simulator you can draw with the
    mouse/trackpad (turn on the finger-drawing toggle in the editor toolbar).
 
+### Enabling iCloud sync
+
+The project ships with the **iCloud → iCloud Documents** capability and an
+entitlements file (`LifeJournal/LifeJournal.entitlements`) using the container
+`iCloud.com.lifejournal.LifeJournal`.
+
+- In *Signing & Capabilities*, confirm the **iCloud** capability is present and
+  **iCloud Documents** is checked. With automatic signing, Xcode registers the
+  iCloud container for your team on first build.
+- If you change the bundle id, also update the iCloud container identifier
+  (use `iCloud.<your-bundle-id>`) in both the capability and the entitlements
+  file so they match.
+- Sign the simulator/device into an iCloud account to see journals sync.
+- Sync is optional: with no iCloud account (or capability), the app stores
+  everything locally and still works.
+
 Minimum deployment target: **iOS 17**. Built with SwiftUI + PencilKit; no
 third-party dependencies.
 
@@ -79,9 +105,8 @@ canonical size (1024 × 1325) so your handwriting stays aligned to the template.
 
 ## Ideas for next steps
 
-- iCloud sync (Documents are already file-based — drop them in an iCloud
-  container).
-- Export a journal (or page) to PDF.
 - Import the original Life Journal PDF pages as custom backgrounds.
 - Stickers, photo insertion, and text boxes.
 - Daily verse / reading-plan integration.
+- Per-page PDF export and printing.
+- Full-text handwriting search (PencilKit + on-device recognition).

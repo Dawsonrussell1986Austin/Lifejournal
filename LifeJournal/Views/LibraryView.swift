@@ -6,6 +6,7 @@ struct LibraryView: View {
     @State private var showingNewJournal = false
     @State private var openJournalID: UUID?
     @State private var journalPendingDelete: Journal?
+    @State private var exportedPDF: ExportedPDF?
 
     private let columns = [GridItem(.adaptive(minimum: 170, maximum: 220), spacing: 28)]
 
@@ -27,6 +28,11 @@ struct LibraryView: View {
                         }
                         .buttonStyle(.plain)
                         .contextMenu {
+                            Button {
+                                exportedPDF = PDFExporter.export(journal: journal, store: store)
+                            } label: {
+                                Label("Export as PDF", systemImage: "square.and.arrow.up")
+                            }
                             Button(role: .destructive) {
                                 journalPendingDelete = journal
                             } label: {
@@ -40,6 +46,14 @@ struct LibraryView: View {
             .background(LJTheme.shelf.ignoresSafeArea())
             .navigationTitle("Life Journal")
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    if store.isCloudEnabled {
+                        Label("Synced with iCloud", systemImage: "checkmark.icloud")
+                            .labelStyle(.iconOnly)
+                            .foregroundColor(LJTheme.accent)
+                            .help("Your journals sync with iCloud")
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         showingNewJournal = true
@@ -57,6 +71,9 @@ struct LibraryView: View {
                     let journal = store.createJournal(title: title, cover: cover, firstTemplate: template)
                     openJournalID = journal.id
                 }
+            }
+            .sheet(item: $exportedPDF) { pdf in
+                ShareSheet(items: [pdf.url])
             }
             .alert(item: $journalPendingDelete) { journal in
                 Alert(
