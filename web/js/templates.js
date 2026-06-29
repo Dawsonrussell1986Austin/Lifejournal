@@ -104,12 +104,10 @@ window.LJTemplates = (function () {
     for (let y = 18; y < H - 14; y += 4) { ctx.beginPath(); ctx.moveTo(W - edgeW, y); ctx.lineTo(W, y); ctx.stroke(); }
     ctx.restore();
 
-    // --- elastic band ---
+    // --- elastic band (flat, near the right edge) ---
     const band = cv.band || '#d8432e';
-    const bx = Math.round(W * 0.70), bw = 44;
+    const bx = Math.round(W * 0.82), bw = 40;
     ctx.fillStyle = band; ctx.fillRect(bx, -6, bw, H + 12);
-    ctx.fillStyle = 'rgba(255,255,255,.20)'; ctx.fillRect(bx + 6, 0, 5, H);
-    ctx.fillStyle = 'rgba(0,0,0,.20)'; ctx.fillRect(bx + bw - 8, 0, 6, H);
 
     // --- title content, centered in the cloth area left of the band ---
     const cw = bx, cx = cw / 2;
