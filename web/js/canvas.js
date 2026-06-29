@@ -282,14 +282,17 @@ window.JournalCanvas = (function () {
   }
 
   // Stand-alone helper to render any page (used for thumbnails / export).
-  function renderPageCanvas(page, journal, scale) {
+  // `photoImg` (optional) is drawn into the month photo band for planMonth.
+  function renderPageCanvas(page, journal, scale, photoImg) {
     const out = document.createElement('canvas');
     out.width = PAGE.W * scale; out.height = PAGE.H * scale;
     const ctx = out.getContext('2d');
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     ctx.scale(scale, scale);
     ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, PAGE.W, PAGE.H);
-    LJTemplates.draw(ctx, page.template, templateOpts(page, journal));
+    const opts = templateOpts(page, journal);
+    if (photoImg) opts.photo = photoImg;
+    LJTemplates.draw(ctx, page.template, opts);
     const data = LJStore.loadPageData(page.id);
     const jc = JournalCanvas.prototype;
     for (const s of data.strokes) jc._drawStroke.call({ _segWidth: jc._segWidth }, ctx, s);

@@ -12,7 +12,7 @@ window.LJSync = (function () {
     const pages = {};
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
-      if (k && k.indexOf('lifejournal.page.') === 0) pages[k] = localStorage.getItem(k);
+      if (k && (k.indexOf('lifejournal.page.') === 0 || k.indexOf('lifejournal.photo.') === 0)) pages[k] = localStorage.getItem(k);
     }
     return { v: 1, savedAt: Date.now(), library: library, pages: pages };
   }
@@ -23,7 +23,7 @@ window.LJSync = (function () {
     const remove = [];
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
-      if (k && k.indexOf('lifejournal.page.') === 0) remove.push(k);
+      if (k && (k.indexOf('lifejournal.page.') === 0 || k.indexOf('lifejournal.photo.') === 0)) remove.push(k);
     }
     remove.forEach((k) => localStorage.removeItem(k));
     Object.keys(p.pages || {}).forEach((k) => localStorage.setItem(k, p.pages[k]));

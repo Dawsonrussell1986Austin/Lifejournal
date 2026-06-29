@@ -165,6 +165,7 @@
     state.selectedTextId = null;
     renderTextLayer();
     renderLinkLayer();
+    renderPhotoLayer();
     updatePageMeta();
   }
 
@@ -178,6 +179,7 @@
     state.canvas.layout(stage.clientWidth - 44, stage.clientHeight - 44);
     renderTextLayer(); // reposition text boxes for the new scale
     renderLinkLayer(); // reposition calendar links
+    renderPhotoLayer(); // reposition the month photo
   }
 
   function pageData() {
@@ -368,6 +370,58 @@
     }
   }
 
+  // ---------- Month photobook ----------
+  function renderPhotoLayer() {
+    const layer = $('#photoLayer');
+    if (!layer) return;
+    layer.innerHTML = '';
+    const page = currentPage();
+    if (!page || page.template !== 'planMonth') return;
+    const s = (state.canvas && state.canvas.scaleFactor) || 1;
+    const pb = LJPlanner.monthPhotoRect();
+    const userSrc = LJStore.getPhoto(state.journal.id, page.month);
+
+    const img = el('img', 'lj-photo');
+    img.style.left = (pb.x * s) + 'px';
+    img.style.top = (pb.y * s) + 'px';
+    img.style.width = (pb.w * s) + 'px';
+    img.style.height = (pb.h * s) + 'px';
+    img.src = userSrc || LJPlanner.defaultPhotoURL(page.month);
+    img.onerror = () => { if (!img.dataset.fb) { img.dataset.fb = '1'; img.src = LJPlanner.fallbackPhotoURL(page.month); } };
+    layer.appendChild(img);
+
+    const change = el('button', 'lj-photo-btn', '📷 Change photo');
+    change.style.left = (pb.x * s + 14) + 'px';
+    change.style.top = ((pb.y + pb.h) * s - 46) + 'px';
+    change.onclick = () => { state.pendingPhotoMonth = page.month; $('#photoInput').click(); };
+    layer.appendChild(change);
+
+    if (userSrc) {
+      const reset = el('button', 'lj-photo-btn', '↺ Reset');
+      reset.style.left = (pb.x * s + pb.w * s - 104) + 'px';
+      reset.style.top = ((pb.y + pb.h) * s - 46) + 'px';
+      reset.onclick = () => { LJStore.removePhoto(state.journal.id, page.month); renderPhotoLayer(); maybeSyncPhotoNote(); };
+      layer.appendChild(reset);
+    }
+  }
+
+  function maybeSyncPhotoNote() {}
+
+  function downscaleImage(file, maxW, cb) {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxW / img.width);
+      const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      cb(c.toDataURL('image/jpeg', 0.82));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); cb(null); };
+    img.src = url;
+  }
+
   // ---------- Text boxes ----------
   function textSize(v) { return Math.round(18 + v * 3.4); }
 
@@ -538,6 +592,19 @@
     $('#dockNew').onclick = openNewJournal;
     $('#dockSync').onclick = openSync;
     $('#dockHome').onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+    $('#photoInput').onchange = (e) => {
+      const f = e.target.files && e.target.files[0];
+      e.target.value = '';
+      if (!f) return;
+      downscaleImage(f, 1400, (durl) => {
+        if (!durl) { toast('Could not read that image'); return; }
+        if (!LJStore.setPhoto(state.journal.id, state.pendingPhotoMonth, durl)) {
+          toast('Photo too large for local storage'); return;
+        }
+        renderPhotoLayer();
+        toast('Photo updated ✓');
+      });
+    };
     $('#njCancel').onclick = () => $('#newJournalModal').classList.add('hidden');
     $('#njCreate').onclick = createJournal;
 

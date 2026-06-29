@@ -62,6 +62,18 @@ window.LJTemplates = (function () {
     ctx.arcTo(x, y, x + w, y, r);
     ctx.closePath();
   }
+  // Draw an image cover-fit (centered, cropped) into a rounded rect.
+  function drawCover(ctx, img, x, y, w, h, r) {
+    ctx.save();
+    roundRect(ctx, x, y, w, h, r); ctx.clip();
+    const ir = img.width / img.height, rr = w / h;
+    let dw, dh, dx, dy;
+    if (ir > rr) { dh = h; dw = h * ir; dx = x - (dw - w) / 2; dy = y; }
+    else { dw = w; dh = w / ir; dx = x; dy = y - (dh - h) / 2; }
+    ctx.drawImage(img, dx, dy, dw, dh);
+    ctx.restore();
+  }
+
   function dot(ctx, x, y, r, color) {
     ctx.save(); ctx.fillStyle = color || COLORS.accent;
     ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); ctx.restore();
@@ -308,9 +320,25 @@ window.LJTemplates = (function () {
 
   function planMonth(ctx, o) {
     const P = LJPlanner, g = P.monthGeom();
-    label(ctx, P.MONTHS[o.month], M, M + 50, { size: 34, color: COLORS.ink, serif: true, tracking: 0, caps: false });
-    text(ctx, String(o.year), M, M + 92, `400 20px ${SANS}`, COLORS.softInk);
-    caption(ctx, 'Tap a date to open that day · tap the month name for the year.', M, M + 126);
+    // Photo band placeholder — the live editor overlays the real photo here,
+    // and PDF export draws it in (see o.photo). This soft gradient shows in
+    // thumbnails / if a photo is missing.
+    const pb = P.monthPhotoRect();
+    if (o.photo) {
+      drawCover(ctx, o.photo, pb.x, pb.y, pb.w, pb.h, 18);
+    } else {
+      ctx.save();
+      roundRect(ctx, pb.x, pb.y, pb.w, pb.h, 18);
+      const grad = ctx.createLinearGradient(pb.x, pb.y, pb.x, pb.y + pb.h);
+      grad.addColorStop(0, '#e3e8ee'); grad.addColorStop(1, '#cdd5df');
+      ctx.fillStyle = grad; ctx.fill();
+      ctx.fillStyle = '#9aa3b0'; ctx.textAlign = 'center';
+      text(ctx, '⛰  Add a photo', pb.x + pb.w / 2, pb.y + pb.h / 2, `500 22px ${SANS}`, '#8b94a3', 'middle');
+      ctx.textAlign = 'left'; ctx.restore();
+    }
+    const ty = pb.y + pb.h + 60;
+    label(ctx, P.MONTHS[o.month], M, ty, { size: 34, color: COLORS.ink, serif: true, tracking: 0, caps: false });
+    text(ctx, String(o.year), M + 330, ty, `400 20px ${SANS}`, COLORS.softInk);
     ctx.textAlign = 'center'; setLetterSpacing(ctx, 2);
     for (let c = 0; c < 7; c++) {
       text(ctx, P.WD_LETTER[c], g.gridLeft + c * g.cellW + g.cellW / 2, g.gridTop + 26,

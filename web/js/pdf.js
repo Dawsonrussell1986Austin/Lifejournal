@@ -17,17 +17,38 @@ window.LJPDF = (function () {
     return loading;
   }
 
+  function loadImage(src, crossOrigin) {
+    return new Promise((resolve) => {
+      const im = new Image();
+      if (crossOrigin) im.crossOrigin = 'anonymous';
+      im.onload = () => resolve(im);
+      im.onerror = () => resolve(null);
+      im.src = src;
+    });
+  }
+
+  // The month photo (user upload or themed default) for PDF export.
+  async function loadMonthPhoto(journal, month) {
+    const user = LJStore.getPhoto(journal.id, month);
+    if (user) return await loadImage(user, false);            // dataURL — same origin
+    let im = await loadImage(LJPlanner.defaultPhotoURL(month, 1200), true);
+    if (!im) im = await loadImage(LJPlanner.fallbackPhotoURL(month, 1200), true);
+    return im;                                                // null → template draws placeholder
+  }
+
   async function exportJournal(journal) {
     await ensureLib();
     const { jsPDF } = window.jspdf;
     const { W, H } = LJData.PAGE;
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: [W, H] });
-    journal.pages.forEach((page, i) => {
+    for (let i = 0; i < journal.pages.length; i++) {
+      const page = journal.pages[i];
       if (i > 0) pdf.addPage([W, H], 'portrait');
-      const canvas = JournalCanvas.renderPageCanvas(page, journal, 2);
-      const img = canvas.toDataURL('image/jpeg', 0.92);
-      pdf.addImage(img, 'JPEG', 0, 0, W, H);
-    });
+      let photo = null;
+      if (page.template === 'planMonth') photo = await loadMonthPhoto(journal, page.month);
+      const canvas = JournalCanvas.renderPageCanvas(page, journal, 2, photo);
+      pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, W, H);
+    }
     const name = (journal.title || 'Life Journal').replace(/[\\/:*?"<>|]/g, '-');
     pdf.save(name + '.pdf');
   }

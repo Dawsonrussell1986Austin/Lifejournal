@@ -74,5 +74,19 @@ window.LJStore = (function () {
     try { localStorage.removeItem(pageKey(pageId)); } catch (e) {}
   }
 
-  return { loadLibrary, saveLibrary, sampleJournal, loadPageData, savePageData, deletePage };
+  // Per-month photos for the calendar photobook.
+  const photoKey = (journalId, month) => 'lifejournal.photo.' + journalId + '.' + month;
+  function getPhoto(journalId, month) {
+    try { return localStorage.getItem(photoKey(journalId, month)); } catch (e) { return null; }
+  }
+  function setPhoto(journalId, month, dataURL) {
+    try { localStorage.setItem(photoKey(journalId, month), dataURL); return true; }
+    catch (e) { return false; }
+  }
+  function removePhoto(journalId, month) {
+    try { localStorage.removeItem(photoKey(journalId, month)); } catch (e) {}
+  }
+
+  return { loadLibrary, saveLibrary, sampleJournal, loadPageData, savePageData, deletePage,
+           getPhoto, setPhoto, removePhoto };
 })();

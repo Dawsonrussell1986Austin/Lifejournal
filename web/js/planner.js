@@ -33,10 +33,35 @@ window.LJPlanner = (function () {
     };
   }
 
+  // ---- Photobook: a themed Unsplash photo per month (replaceable) ----
+  const MONTH_PHOTO_IDS = [
+    '1419242902214-272b3f66ee7a', // Jan — winter peaks
+    '1483728642387-6c3bdd6c93e5', // Feb — snow forest
+    '1490750967868-88aa4486c946', // Mar — spring blossom
+    '1522383225653-ed111181a951', // Apr — pink flowers
+    '1416879595882-3373a0480b5b', // May — green field
+    '1507525428034-b723cf961d3e', // Jun — beach
+    '1500382017468-9049fed747ef', // Jul — summer field
+    '1470509037663-253afd7f0f51', // Aug — sunflowers
+    '1507371341162-763b5e419408', // Sep — autumn road
+    '1508255139162-e1f7b7288ab7', // Oct — autumn
+    '1444090542259-0af8fa96557e', // Nov — misty autumn
+    '1512389142860-9c449e58a543'  // Dec — winter lights
+  ];
+  function defaultPhotoURL(month, w) {
+    const id = MONTH_PHOTO_IDS[((month % 12) + 12) % 12];
+    return `https://images.unsplash.com/photo-${id}?w=${w || 1200}&q=75&auto=format&fit=crop`;
+  }
+  function fallbackPhotoURL(month, w) {
+    return `https://picsum.photos/seed/lifejournal-${month}/${w || 1200}/520`;
+  }
+  const PHOTO_H = 430;
+  function monthPhotoRect() { return { x: M, y: M, w: PAGE.W - 2 * M, h: PHOTO_H }; }
+
   // ---- Month calendar geometry (page units) ----
   function monthGeom() {
     const gridLeft = M, gridW = PAGE.W - 2 * M;
-    const gridTop = M + 150, headerH = 42;
+    const gridTop = M + PHOTO_H + 96, headerH = 42;   // sits below the photo + title
     const gridH = PAGE.H - gridTop - M;
     return { gridLeft, gridTop, gridW, gridH, headerH,
              cellW: gridW / 7, cellH: (gridH - headerH) / 6 };
@@ -62,8 +87,8 @@ window.LJPlanner = (function () {
     }
     return out;
   }
-  // Tappable title (month name) → year overview.
-  function monthTitleRect() { return { x: M, y: M + 16, w: 460, h: 64 }; }
+  // Tappable title (month name, now below the photo) → year overview.
+  function monthTitleRect() { return { x: M, y: M + PHOTO_H + 22, w: 460, h: 60 }; }
 
   // ---- Year overview geometry ----
   function yearGeom() {
@@ -144,6 +169,7 @@ window.LJPlanner = (function () {
     MONTHS, WEEKDAYS, WD_LETTER, DAY_MS,
     iso, isoFromTs, parseISO, partsFor,
     monthGeom, monthCells, monthCellRects, monthTitleRect,
+    monthPhotoRect, defaultPhotoURL, fallbackPhotoURL,
     yearGeom, yearMonthRects, headerBackRect,
     weekRowGeom, weekDayRects, todayISO,
     generate, migrate
