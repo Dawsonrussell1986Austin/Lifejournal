@@ -455,6 +455,13 @@ window.LJTemplates = (function () {
   }
   function planDay(ctx, o) { drawDaily(ctx, o.date); }
 
+  // Tappable S M T W T F S markers in the daily header → jump to that weekday.
+  function dailyWeekdayRects() {
+    const out = [];
+    for (let i = 0; i < 7; i++) out.push({ wd: i, x: W - M - 118 + i * 20 - 11, y: M + 26 - 12, w: 22, h: 24 });
+    return out;
+  }
+
   // Interactive checkbox rects for a template (empty = none).
   function checkRects(template) {
     if (template === 'planDay' || template === 'foundationsDaily') return dailyChecks();
@@ -668,21 +675,38 @@ window.LJTemplates = (function () {
     return `rgb(${m(r)},${m(g)},${m(b)})`;
   }
 
+  // Fill the selectable paper (drawn UNDER the template design, GoodNotes-style).
+  function paperFill(ctx, paperId, tintHex) {
+    const P = LJData.PAPERS[paperId] || LJData.PAPERS.white;
+    let base = P.color;
+    if (paperId === 'tint' && tintHex) base = lighten(tintHex, 0.955);
+    ctx.fillStyle = base || '#ffffff';
+    ctx.fillRect(0, 0, W, H);
+    if (P.pattern === 'grid') {
+      ctx.save(); ctx.strokeStyle = '#e6e9ef'; ctx.lineWidth = 1;
+      for (let x = 40; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+      for (let y = 40; y < H; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+      ctx.restore();
+    } else if (P.pattern === 'dots') {
+      ctx.save(); ctx.fillStyle = '#d3d8e0';
+      for (let y = 40; y < H; y += 40) for (let x = 40; x < W; x += 40) { ctx.beginPath(); ctx.arc(x, y, 1.4, 0, Math.PI * 2); ctx.fill(); }
+      ctx.restore();
+    } else if (P.pattern === 'lines') {
+      ctx.save(); ctx.strokeStyle = '#e6e9ef'; ctx.lineWidth = 1;
+      for (let y = 80; y < H; y += 44) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+      ctx.restore();
+    }
+  }
+
   // Public: draw a template into ctx (already scaled to page units).
   function draw(ctx, type, opts) {
     opts = opts || {};
     ctx.save();
-    // Soft pastel paper tinted toward the journal's color (very light so ink
-    // stays legible). Cover/blank keep their own background.
-    // Foundations daily pages use a warm cream paper like the printed planner.
-    const cream = (type === 'planDay' || type === 'foundationsDaily');
-    const tinted = opts.tint && type !== 'cover' && type !== 'blank';
-    ctx.fillStyle = cream ? '#f7f4ec' : (tinted ? lighten(opts.tint, 0.955) : COLORS.paper);
-    ctx.fillRect(0, 0, W, H);
+    if (type !== 'cover') paperFill(ctx, opts.paper || 'white', opts.tint);
     ctx.textAlign = 'left';
     (DRAW[type] || blank)(ctx, opts);
     ctx.restore();
   }
 
-  return { draw, checkRects, nowMarker, fieldRects };
+  return { draw, checkRects, nowMarker, fieldRects, dailyWeekdayRects };
 })();

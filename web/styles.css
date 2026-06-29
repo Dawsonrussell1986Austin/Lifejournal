@@ -166,6 +166,11 @@ html, body {
 .type-layer.typing .lj-field:hover { background: rgba(74, 95, 80, .07); border-radius: 4px; }
 .type-layer.typing .lj-field:focus { background: rgba(74, 95, 80, .12); border-radius: 4px; }
 .mode-btn { font-size: 13px; font-weight: 600; padding: 6px 11px; }
+.paper-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 8px; }
+.paper-swatch { cursor: pointer; text-align: center; }
+.paper-chip { height: 70px; border-radius: 12px; border: 1px solid var(--rule); box-shadow: inset 0 0 0 1px rgba(0,0,0,.02); }
+.paper-swatch.active .paper-chip { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+.paper-swatch .p-label { font-size: 11px; font-weight: 600; color: var(--soft-ink); margin-top: 5px; }
 
 /* Interactive layer (z5): tappable checkboxes + live "now" marker */
 .interactive-layer { position: absolute; inset: 0; z-index: 5; pointer-events: none; }

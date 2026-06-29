@@ -276,7 +276,7 @@ window.JournalCanvas = (function () {
   function templateOpts(page, journal) {
     const cv = LJData.COVERS[journal.cover] || LJData.COVERS.sage;
     return {
-      title: journal.title, cover: journal.cover, tint: cv.vivid || cv.c1,
+      title: journal.title, cover: journal.cover, tint: cv.vivid || cv.c1, paper: page.paper || 'white',
       year: page.year, month: page.month, date: page.date, weekStart: page.weekStart
     };
   }

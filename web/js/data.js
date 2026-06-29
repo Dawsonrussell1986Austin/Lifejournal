@@ -63,6 +63,20 @@ window.LJData = (function () {
 
   const SWATCH_COLORS = ['#1f2330', '#2b59c3', '#c0392b', '#2e7d32', '#b8860b', '#7d3c98'];
 
+  // Selectable paper, drawn under the template design (GoodNotes-style).
+  const PAPERS = {
+    white: { name: 'White',   color: '#ffffff' },
+    cream: { name: 'Cream',   color: '#f7f4ec' },
+    ivory: { name: 'Ivory',   color: '#fbf8f0' },
+    sand:  { name: 'Sand',    color: '#f1ead9' },
+    gray:  { name: 'Gray',    color: '#eef0f3' },
+    tint:  { name: 'Journal', color: null },              // journal accent tint
+    grid:  { name: 'Grid',    color: '#ffffff', pattern: 'grid' },
+    dots:  { name: 'Dot grid',color: '#ffffff', pattern: 'dots' },
+    lines: { name: 'Lined',   color: '#ffffff', pattern: 'lines' }
+  };
+  const PAPER_ORDER = ['white', 'cream', 'ivory', 'sand', 'gray', 'tint', 'grid', 'dots', 'lines'];
+
   function uid() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
       const r = (Math.random() * 16) | 0;
@@ -71,5 +85,5 @@ window.LJData = (function () {
     });
   }
 
-  return { PAGE, COLORS, COVERS, TEMPLATES, INSERTABLE, SWATCH_COLORS, uid };
+  return { PAGE, COLORS, COVERS, TEMPLATES, INSERTABLE, SWATCH_COLORS, PAPERS, PAPER_ORDER, uid };
 })();

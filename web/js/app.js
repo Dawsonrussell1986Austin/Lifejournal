@@ -195,11 +195,14 @@
       inp.readOnly = !isType;
       inp.dataset.idx = idx;
       const size = f.size || 26;
+      const fs = size * 0.86 * s;
       inp.style.left = (f.x * s) + 'px';
-      inp.style.top = ((f.y - size) * s) + 'px';
       inp.style.width = (f.w * s) + 'px';
-      inp.style.height = (size * 1.35 * s) + 'px';
-      inp.style.fontSize = (size * 0.86 * s) + 'px';
+      inp.style.fontSize = fs + 'px';
+      inp.style.height = (fs * 1.2) + 'px';
+      inp.style.lineHeight = (fs * 1.2) + 'px';
+      // box bottom rests on the writing line, so the text sits just above it
+      inp.style.top = (f.y * s - fs * 1.2) + 'px';
       inp.addEventListener('input', () => { state.fields[f.id] = inp.value; saveCurrentDebounced(); });
       inp.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === 'Tab') {
@@ -429,6 +432,13 @@
     } else if (page.template === 'planDay' && page.date) {
       const p = LJPlanner.parseISO(page.date);
       add(LJPlanner.headerBackRect(), () => goToMonth(p.m), 'Back to month');
+      // S M T W T F S markers → jump to that weekday in this week
+      const base = Date.UTC(p.y, p.m, p.d);
+      const sunday = base - new Date(base).getUTCDay() * LJPlanner.DAY_MS;
+      LJTemplates.dailyWeekdayRects().forEach((r) => {
+        const ds = LJPlanner.isoFromTs(sunday + r.wd * LJPlanner.DAY_MS);
+        add({ x: r.x, y: r.y, w: r.w, h: r.h }, () => goToDate(ds), ds);
+      });
     } else if (page.template === 'planWeekSermon' && page.weekStart) {
       const p = LJPlanner.parseISO(page.weekStart);
       add(LJPlanner.headerBackRect(), () => goToMonth(p.m), 'Back to month');
@@ -468,6 +478,42 @@
       line.appendChild(el('span', 'lj-now-lab', 'Now · ' + nm.label));
       layer.appendChild(line);
     }
+  }
+
+  // ---------- Paper picker ----------
+  function lightenHex(hex, amt) {
+    const n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+    const m = (c) => Math.round(c + (255 - c) * amt);
+    return 'rgb(' + m(r) + ',' + m(g) + ',' + m(b) + ')';
+  }
+  function openPaper() {
+    const grid = $('#paperGrid');
+    grid.innerHTML = '';
+    const cur = (currentPage() && currentPage().paper) || 'white';
+    const cv = LJData.COVERS[state.journal.cover] || {};
+    LJData.PAPER_ORDER.forEach((id) => {
+      const P = LJData.PAPERS[id];
+      const sw = el('div', 'paper-swatch' + (id === cur ? ' active' : ''));
+      const chip = el('div', 'paper-chip');
+      if (id === 'tint') chip.style.background = lightenHex(cv.vivid || cv.c1 || '#8aa6a0', 0.9);
+      else if (P.pattern === 'grid') { chip.style.background = '#fff'; chip.style.backgroundImage = 'linear-gradient(#e6e9ef 1px,transparent 1px),linear-gradient(90deg,#e6e9ef 1px,transparent 1px)'; chip.style.backgroundSize = '12px 12px'; }
+      else if (P.pattern === 'dots') { chip.style.background = '#fff'; chip.style.backgroundImage = 'radial-gradient(#d3d8e0 1.3px, transparent 1.4px)'; chip.style.backgroundSize = '12px 12px'; }
+      else if (P.pattern === 'lines') { chip.style.background = 'repeating-linear-gradient(#fff,#fff 11px,#e6e9ef 11px,#e6e9ef 12px)'; }
+      else chip.style.background = P.color;
+      sw.appendChild(chip);
+      sw.appendChild(el('div', 'p-label', P.name));
+      sw.onclick = () => setPaper(id);
+      grid.appendChild(sw);
+    });
+    $('#paperModal').classList.remove('hidden');
+  }
+  function setPaper(id) {
+    const page = currentPage();
+    if (!page) return;
+    page.paper = id;                       // page is a reference inside state.lib
+    LJStore.saveLibrary(state.lib);
+    state.canvas.setTemplate(page.template, JournalCanvas.templateOpts(page, state.journal));
+    $('#paperModal').classList.add('hidden');
   }
 
   // ---------- Month photobook ----------
@@ -768,6 +814,8 @@
     });
 
     $('#typeModeBtn').onclick = () => setMode(state.mode === 'type' ? 'draw' : 'type');
+    $('#paperBtn').onclick = openPaper;
+    $('#paperClose').onclick = () => $('#paperModal').classList.add('hidden');
 
     const pencilBtn = $('#pencilOnlyBtn');
     pencilBtn.onclick = () => {
