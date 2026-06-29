@@ -351,10 +351,21 @@ window.LJTemplates = (function () {
            `600 13px ${SANS}`, (c === 0 || c === 6) ? COLORS.accent : COLORS.softInk);
     }
     setLetterSpacing(ctx, 0); ctx.textAlign = 'left';
+    const today = P.todayISO();
     ctx.save(); ctx.strokeStyle = COLORS.faint; ctx.lineWidth = 1;
     P.monthCellRects(o.year, o.month).forEach((c) => {
       ctx.strokeRect(c.x, c.y, c.w, c.h);
-      if (c.day) text(ctx, String(c.day), c.x + 10, c.y + 8, `600 16px ${SANS}`, COLORS.ink, 'top');
+      if (!c.day) return;
+      if (c.date === today) {
+        ctx.save();
+        ctx.fillStyle = COLORS.accent;
+        ctx.beginPath(); ctx.arc(c.x + 18, c.y + 17, 15, 0, Math.PI * 2); ctx.fill();
+        ctx.textAlign = 'center';
+        text(ctx, String(c.day), c.x + 18, c.y + 17, `700 16px ${SANS}`, '#ffffff', 'middle');
+        ctx.restore();
+      } else {
+        text(ctx, String(c.day), c.x + 10, c.y + 8, `600 16px ${SANS}`, COLORS.ink, 'top');
+      }
     });
     ctx.restore();
   }
@@ -370,12 +381,12 @@ window.LJTemplates = (function () {
     const rx = M + 446, rw = W - M - rx;
     return {
       rx, rw, schedLineX: M + 42, schedRight: M + 406,
-      thankY: M + 58, thankGap: 28, thankRows: 2,
+      thankY: M + 58, thankGap: 28, thankRows: 2, thankW: (W - 2 * M) / 2,
       schedLabelY: M + 124, schedTop: M + 168, schedRowH: 44,
-      scr: { y: M + 130, d: [M + 178, M + 212] },
-      obs: { y: M + 240, d: [M + 288, M + 322] },
-      gos: { y: M + 350, d: [M + 398, M + 432] },
-      top3Y: M + 510, top3Gap: 42,
+      top3Y: M + 160, top3Gap: 42,
+      scr: { y: M + 320, d: [M + 368, M + 402] },
+      obs: { y: M + 430, d: [M + 478, M + 512] },
+      gos: { y: M + 540, d: [M + 588, M + 622] },
       stepsY: M + 710, stepsGap: 34,
       jrnLabelY: M + 894, jrnTop: M + 930, jrnGap: 36, jrnRows: 7
     };
@@ -388,7 +399,7 @@ window.LJTemplates = (function () {
   }
   function dailyFields() {
     const L = dailyLayout(), f = [];
-    for (let i = 0; i < L.thankRows; i++) f.push({ id: 'th' + i, x: M, y: L.thankY + i * L.thankGap, w: W - 2 * M, size: 22 });
+    for (let i = 0; i < L.thankRows; i++) f.push({ id: 'th' + i, x: M, y: L.thankY + i * L.thankGap, w: L.thankW, size: 22 });
     SCHED_HOURS.forEach((h, i) => f.push({ id: 'sch' + i, x: L.schedLineX, y: L.schedTop + i * L.schedRowH, w: L.schedRight - L.schedLineX, size: 22 }));
     L.scr.d.forEach((y, i) => f.push({ id: 'scr' + i, x: L.rx, y, w: L.rw, size: 20 }));
     L.obs.d.forEach((y, i) => f.push({ id: 'obs' + i, x: L.rx, y, w: L.rw, size: 20 }));
@@ -411,19 +422,21 @@ window.LJTemplates = (function () {
     setLetterSpacing(ctx, 1);
     text(ctx, 'I AM THANKFUL FOR…', M, M + 30, `700 15px ${SANS}`, COLORS.ink);
     setLetterSpacing(ctx, 0);
-    // date + weekday markers (top right)
+    // date (far top-right corner) + weekday markers below it
     let activeWd = -1, dateStr = 'DATE      /      /';
     if (dated && window.LJPlanner) { const p = LJPlanner.partsFor(dated); activeWd = p.weekday; dateStr = p.long; }
-    text(ctx, dateStr, W - M - 340, M + 30, `600 14px ${SANS}`, COLORS.softInk);
+    ctx.save(); ctx.textAlign = 'right';
+    text(ctx, dateStr, W - M, M + 30, `600 15px ${SANS}`, COLORS.ink);
+    ctx.restore();
     const wd = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
     ctx.save(); ctx.textAlign = 'center';
     wd.forEach((d, i) => {
-      const x = W - M - 118 + i * 20, on = i === activeWd;
-      if (on) { ctx.fillStyle = COLORS.accent; ctx.beginPath(); ctx.arc(x, M + 26, 9, 0, Math.PI * 2); ctx.fill(); }
-      text(ctx, d, x, M + 30, `700 12px ${SANS}`, on ? '#fff' : COLORS.softInk);
+      const x = W - M - 128 + i * 20, on = i === activeWd;
+      if (on) { ctx.fillStyle = COLORS.accent; ctx.beginPath(); ctx.arc(x, M + 56, 9, 0, Math.PI * 2); ctx.fill(); }
+      text(ctx, d, x, M + 60, `700 12px ${SANS}`, on ? '#fff' : COLORS.softInk);
     });
     ctx.textAlign = 'left'; ctx.restore();
-    dotRows(ctx, M, L.thankY, W - 2 * M, L.thankRows, L.thankGap);
+    dotRows(ctx, M, L.thankY, L.thankW, L.thankRows, L.thankGap);
 
     setLetterSpacing(ctx, 1); text(ctx, 'DAILY SCHEDULE', M, L.schedLabelY, `700 13px ${SANS}`, COLORS.ink); setLetterSpacing(ctx, 0);
     SCHED_HOURS.forEach((h, i) => {
@@ -454,7 +467,7 @@ window.LJTemplates = (function () {
   // Tappable S M T W T F S markers in the daily header → jump to that weekday.
   function dailyWeekdayRects() {
     const out = [];
-    for (let i = 0; i < 7; i++) out.push({ wd: i, x: W - M - 118 + i * 20 - 11, y: M + 26 - 12, w: 22, h: 24 });
+    for (let i = 0; i < 7; i++) out.push({ wd: i, x: W - M - 128 + i * 20 - 11, y: M + 56 - 12, w: 22, h: 24 });
     return out;
   }
 
