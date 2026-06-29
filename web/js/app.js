@@ -292,6 +292,14 @@
       const p = LJPlanner.partsFor(page.weekStart);
       return `Week of ${p.shortMonthDay}`;
     }
+    if (page.template === 'weeklyFoundations' && page.weekStart) {
+      const p = LJPlanner.partsFor(page.weekStart);
+      return `Foundations · wk ${p.shortMonthDay}`;
+    }
+    if (page.template === 'weeklyPrayer' && page.weekStart) {
+      const p = LJPlanner.partsFor(page.weekStart);
+      return `Prayer · wk ${p.shortMonthDay}`;
+    }
     if (page.template === 'planWeekSermon' && page.weekStart) {
       const p = LJPlanner.partsFor(page.weekStart);
       return `Sermon · wk ${p.shortMonthDay}`;

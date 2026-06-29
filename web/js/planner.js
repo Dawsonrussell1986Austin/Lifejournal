@@ -144,25 +144,50 @@ window.LJPlanner = (function () {
     for (let ws = start; ws <= end; ws += 7 * DAY_MS) {
       const wIso = isoFromTs(ws);
       pages.push({ id: uid(), template: 'planWeek', weekStart: wIso });
+      pages.push({ id: uid(), template: 'weeklyFoundations', weekStart: wIso });
+      pages.push({ id: uid(), template: 'weeklyPrayer', weekStart: wIso });
       pages.push({ id: uid(), template: 'planWeekSermon', weekStart: wIso });
       for (let i = 0; i < 7; i++) pages.push({ id: uid(), template: 'planDay', date: isoFromTs(ws + i * DAY_MS) });
     }
-    return { id: uid(), title: `LifeJournal ${year}`, cover: 'navy', kind: 'planner', year: year, pver: 2, pages: pages };
+    return { id: uid(), title: `LifeJournal ${year}`, cover: 'navy', kind: 'planner', year: year, pver: 3, pages: pages };
   }
 
-  // Add a week page before each week's sermon page for planners created before
-  // the week view existed — in place, so existing day/sermon pages (and their
-  // handwriting) are preserved. Returns true if the journal changed.
+  // Upgrade older planners in place so existing pages (and their handwriting)
+  // are preserved. Each step is additive and runs in sequence:
+  //   pver 1 → 2: add a week-overview page before each week's sermon page.
+  //   pver 2 → 3: add the Five Foundations + Prayer pages after each week page.
+  // Returns true if the journal changed.
   function migrate(journal) {
-    if (journal.kind !== 'planner' || journal.pver >= 2) return false;
-    const out = [];
-    for (const p of journal.pages) {
-      if (p.template === 'planWeekSermon') out.push({ id: LJData.uid(), template: 'planWeek', weekStart: p.weekStart });
-      out.push(p);
+    if (journal.kind !== 'planner') return false;
+    let changed = false;
+    const pver = journal.pver || 1;
+
+    if (pver < 2) {
+      const out = [];
+      for (const p of journal.pages) {
+        if (p.template === 'planWeekSermon') out.push({ id: LJData.uid(), template: 'planWeek', weekStart: p.weekStart });
+        out.push(p);
+      }
+      journal.pages = out;
+      journal.pver = 2;
+      changed = true;
     }
-    journal.pages = out;
-    journal.pver = 2;
-    return true;
+
+    if ((journal.pver || 1) < 3) {
+      const out = [];
+      for (const p of journal.pages) {
+        out.push(p);
+        if (p.template === 'planWeek') {
+          out.push({ id: LJData.uid(), template: 'weeklyFoundations', weekStart: p.weekStart });
+          out.push({ id: LJData.uid(), template: 'weeklyPrayer', weekStart: p.weekStart });
+        }
+      }
+      journal.pages = out;
+      journal.pver = 3;
+      changed = true;
+    }
+
+    return changed;
   }
 
   return {
