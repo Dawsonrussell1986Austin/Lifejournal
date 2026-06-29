@@ -18,3 +18,5 @@ build/
 # CocoaPods / Carthage (not used, but ignored if added later)
 Pods/
 Carthage/Build/
+.vercel
+.env*
