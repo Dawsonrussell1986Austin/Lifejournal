@@ -377,8 +377,7 @@ window.LJTemplates = (function () {
       gos: { y: M + 350, d: [M + 398, M + 432] },
       top3Y: M + 510, top3Gap: 42,
       stepsY: M + 710, stepsGap: 34,
-      jrnLabelY: M + 894, jrnTop: M + 930, jrnGap: 36, jrnRows: 5,
-      readY: H - M - 8
+      jrnLabelY: M + 894, jrnTop: M + 930, jrnGap: 36, jrnRows: 7
     };
   }
   function dailyChecks() {
@@ -447,9 +446,6 @@ window.LJTemplates = (function () {
 
     setLetterSpacing(ctx, 1); text(ctx, 'JOURNAL / NOTES / PRAYER', M, L.jrnLabelY, `700 13px ${SANS}`, COLORS.ink); setLetterSpacing(ctx, 0);
     for (let i = 0; i < L.jrnRows; i++) dotLine(ctx, M, L.jrnTop + i * L.jrnGap, W - 2 * M);
-
-    ctx.fillStyle = '#e7e3d7'; roundRect(ctx, M, L.readY - 26, W - 2 * M, 30, 6); ctx.fill();
-    setLetterSpacing(ctx, 1); text(ctx, 'READING / LISTENING / WATCHING', M + 16, L.readY - 5, `700 12px ${SANS}`, COLORS.softInk); setLetterSpacing(ctx, 0);
 
     dailyChecks().forEach((r) => checkbox(ctx, r.x, r.y, r.size));
   }
