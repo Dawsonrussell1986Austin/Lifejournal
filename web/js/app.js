@@ -489,7 +489,10 @@
   function openPaper() {
     const grid = $('#paperGrid');
     grid.innerHTML = '';
-    const cur = (currentPage() && currentPage().paper) || 'white';
+    const page = currentPage();
+    const cur = (page && page.paper) || state.journal.paper || 'white';
+    const all = $('#paperAll');
+    if (all) all.checked = false;
     const cv = LJData.COVERS[state.journal.cover] || {};
     LJData.PAPER_ORDER.forEach((id) => {
       const P = LJData.PAPERS[id];
@@ -502,7 +505,7 @@
       else chip.style.background = P.color;
       sw.appendChild(chip);
       sw.appendChild(el('div', 'p-label', P.name));
-      sw.onclick = () => setPaper(id);
+      sw.onclick = () => ($('#paperAll') && $('#paperAll').checked) ? setPaperAll(id) : setPaper(id);
       grid.appendChild(sw);
     });
     $('#paperModal').classList.remove('hidden');
@@ -513,6 +516,16 @@
     page.paper = id;                       // page is a reference inside state.lib
     LJStore.saveLibrary(state.lib);
     state.canvas.setTemplate(page.template, JournalCanvas.templateOpts(page, state.journal));
+    $('#paperModal').classList.add('hidden');
+  }
+  // Make this the journal-wide default and clear every per-page override so all
+  // existing and future pages share it.
+  function setPaperAll(id) {
+    state.journal.paper = id;
+    (state.journal.pages || []).forEach((p) => { delete p.paper; });
+    LJStore.saveLibrary(state.lib);
+    const page = currentPage();
+    if (page) state.canvas.setTemplate(page.template, JournalCanvas.templateOpts(page, state.journal));
     $('#paperModal').classList.add('hidden');
   }
 
