@@ -54,15 +54,17 @@ window.LJStore = (function () {
       const raw = LJKV.get(pageKey(pageId));
       if (raw) {
         const v = JSON.parse(raw);
-        if (Array.isArray(v)) return { strokes: v, texts: [] };
-        return { strokes: v.strokes || [], texts: v.texts || [] };
+        if (Array.isArray(v)) return { strokes: v, texts: [], checks: {} };
+        return { strokes: v.strokes || [], texts: v.texts || [], checks: v.checks || {} };
       }
     } catch (e) {}
-    return { strokes: [], texts: [] };
+    return { strokes: [], texts: [], checks: {} };
   }
 
   function savePageData(pageId, data) {
-    LJKV.set(pageKey(pageId), JSON.stringify({ strokes: data.strokes || [], texts: data.texts || [] }));
+    LJKV.set(pageKey(pageId), JSON.stringify({
+      strokes: data.strokes || [], texts: data.texts || [], checks: data.checks || {}
+    }));
   }
 
   function deletePage(pageId) { LJKV.remove(pageKey(pageId)); }

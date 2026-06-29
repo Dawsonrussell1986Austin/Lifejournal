@@ -13,17 +13,17 @@ window.LJData = (function () {
 
   // Cover themes: gradient stops, foil (lettering), and an opening verse.
   const COVERS = {
-    sage:       { name: 'Sage',       c1: '#4a5f50', c2: '#607967', foil: '#f4f1e8', vivid: '#3aa675',
+    sage:       { name: 'Sage',       c1: '#4a5f50', c2: '#607967', foil: '#f4f1e8', vivid: '#3aa675', band: '#d8643a',
                   verse: '“This is the day the Lord has made; let us rejoice and be glad in it.”  — Psalm 118:24' },
-    navy:       { name: 'Navy',       c1: '#1f2e44', c2: '#2a3d5c', foil: '#eef1f6', vivid: '#3b82f6',
+    navy:       { name: 'Navy',       c1: '#1f2e44', c2: '#2a3d5c', foil: '#eef1f6', vivid: '#3b82f6', band: '#e0412a',
                   verse: '“Your word is a lamp to my feet and a light to my path.”  — Psalm 119:105' },
-    terracotta: { name: 'Terracotta', c1: '#a85c46', c2: '#bd6e57', foil: '#fbeee7', vivid: '#ef8a4c',
+    terracotta: { name: 'Terracotta', c1: '#a85c46', c2: '#bd6e57', foil: '#fbeee7', vivid: '#ef8a4c', band: '#2f5d50',
                   verse: '“For I know the plans I have for you, declares the Lord.”  — Jeremiah 29:11' },
-    plum:       { name: 'Plum',       c1: '#56395b', c2: '#66476b', foil: '#f3edf0', vivid: '#c25ad6',
+    plum:       { name: 'Plum',       c1: '#56395b', c2: '#66476b', foil: '#f3edf0', vivid: '#c25ad6', band: '#e0b13a',
                   verse: '“Be still, and know that I am God.”  — Psalm 46:10' },
-    charcoal:   { name: 'Charcoal',   c1: '#2c2f36', c2: '#383d45', foil: '#eef0f2', vivid: '#64748b',
+    charcoal:   { name: 'Charcoal',   c1: '#2c2f36', c2: '#383d45', foil: '#eef0f2', vivid: '#64748b', band: '#e0412a',
                   verse: '“His mercies are new every morning.”  — Lamentations 3:22–23' },
-    gold:       { name: 'Gold',       c1: '#9a7a37', c2: '#b38f45', foil: '#f8e9bd', vivid: '#e0a93b',
+    gold:       { name: 'Gold',       c1: '#9a7a37', c2: '#b38f45', foil: '#f8e9bd', vivid: '#e0a93b', band: '#33685a',
                   verse: '“Trust in the Lord with all your heart.”  — Proverbs 3:5' }
   };
 

@@ -16,6 +16,7 @@
     saveTimer: null,
     njCover: 'sage',
     texts: [],            // text boxes on the current page
+    checks: {},           // tapped checkbox state on the current page
     tool: 'pen',
     color: LJData.SWATCH_COLORS[0],
     selectedTextId: null
@@ -162,10 +163,12 @@
     state.canvas.setTemplate(page.template, JournalCanvas.templateOpts(page, state.journal));
     state.canvas.setStrokes(data.strokes);
     state.texts = data.texts || [];
+    state.checks = data.checks || {};
     state.selectedTextId = null;
     renderTextLayer();
     renderLinkLayer();
     renderPhotoLayer();
+    renderInteractiveLayer();
     updatePageMeta();
   }
 
@@ -180,10 +183,11 @@
     renderTextLayer(); // reposition text boxes for the new scale
     renderLinkLayer(); // reposition calendar links
     renderPhotoLayer(); // reposition the month photo
+    renderInteractiveLayer(); // reposition checks + now marker
   }
 
   function pageData() {
-    return { strokes: state.canvas ? state.canvas.strokes : [], texts: state.texts };
+    return { strokes: state.canvas ? state.canvas.strokes : [], texts: state.texts, checks: state.checks };
   }
   function saveCurrentDebounced() {
     const id = currentPage().id;
@@ -367,6 +371,41 @@
     } else if (page.template === 'planWeekSermon' && page.weekStart) {
       const p = LJPlanner.parseISO(page.weekStart);
       add(LJPlanner.headerBackRect(), () => goToMonth(p.m), 'Back to month');
+    }
+  }
+
+  // ---------- Interactive layer: tappable checks + live time marker ----------
+  function renderInteractiveLayer() {
+    const layer = $('#interactiveLayer');
+    if (!layer) return;
+    layer.innerHTML = '';
+    const page = currentPage();
+    if (!page) return;
+    const s = (state.canvas && state.canvas.scaleFactor) || 1;
+
+    (LJTemplates.checkRects(page.template) || []).forEach((r) => {
+      const b = el('button', 'lj-check' + (state.checks[r.id] ? ' checked' : ''));
+      b.style.left = (r.x * s) + 'px';
+      b.style.top = (r.y * s) + 'px';
+      b.style.width = (r.size * s) + 'px';
+      b.style.height = (r.size * s) + 'px';
+      b.style.fontSize = (r.size * s) + 'px';
+      b.onclick = () => {
+        if (state.checks[r.id]) { delete state.checks[r.id]; b.classList.remove('checked'); }
+        else { state.checks[r.id] = true; b.classList.add('checked'); }
+        saveCurrentDebounced();
+      };
+      layer.appendChild(b);
+    });
+
+    const nm = LJTemplates.nowMarker(page);
+    if (nm) {
+      const line = el('div', 'lj-now');
+      line.style.left = (nm.x * s) + 'px';
+      line.style.top = (nm.y * s) + 'px';
+      line.style.width = (nm.w * s) + 'px';
+      line.appendChild(el('span', 'lj-now-lab', 'Now · ' + nm.label));
+      layer.appendChild(line);
     }
   }
 
@@ -687,6 +726,11 @@
     window.addEventListener('resize', () => {
       if (!$('#editor').classList.contains('hidden') && state.canvas) relayout();
     });
+
+    // Keep the live "now" marker current while the editor is open.
+    setInterval(() => {
+      if (!$('#editor').classList.contains('hidden')) renderInteractiveLayer();
+    }, 30000);
     window.addEventListener('beforeunload', flushSave);
 
     // Close modals on backdrop click.

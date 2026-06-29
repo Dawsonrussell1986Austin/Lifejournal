@@ -87,38 +87,46 @@ window.LJTemplates = (function () {
   // ---- templates ----
   function cover(ctx, o) {
     const cv = COVERS[o.cover] || COVERS.sage;
-    const g = ctx.createLinearGradient(0, 0, W, H);
-    g.addColorStop(0, cv.c1); g.addColorStop(1, cv.c2);
+
+    // --- cloth hardcover ---
+    const g = ctx.createLinearGradient(0, 0, W * 0.5, H);
+    g.addColorStop(0, cv.c2); g.addColorStop(1, cv.c1);
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-
-    ctx.save();
-    ctx.strokeStyle = cv.foil; ctx.globalAlpha = 0.55; ctx.lineWidth = 1.5;
-    roundRect(ctx, 40, 40, W - 80, H - 80, 6); ctx.stroke();
+    // faint woven texture
+    ctx.save(); ctx.globalAlpha = 0.04; ctx.strokeStyle = '#000'; ctx.lineWidth = 1;
+    for (let x = 0; x < W; x += 4) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
     ctx.restore();
 
+    // --- page block along the right edge ---
+    const edgeW = 24;
+    ctx.fillStyle = '#f1eee5'; ctx.fillRect(W - edgeW, 10, edgeW, H - 20);
+    ctx.save(); ctx.strokeStyle = 'rgba(0,0,0,.06)'; ctx.lineWidth = 1;
+    for (let y = 18; y < H - 14; y += 4) { ctx.beginPath(); ctx.moveTo(W - edgeW, y); ctx.lineTo(W, y); ctx.stroke(); }
+    ctx.restore();
+
+    // --- elastic band ---
+    const band = cv.band || '#d8432e';
+    const bx = Math.round(W * 0.70), bw = 44;
+    ctx.fillStyle = band; ctx.fillRect(bx, -6, bw, H + 12);
+    ctx.fillStyle = 'rgba(255,255,255,.20)'; ctx.fillRect(bx + 6, 0, 5, H);
+    ctx.fillStyle = 'rgba(0,0,0,.20)'; ctx.fillRect(bx + bw - 8, 0, 6, H);
+
+    // --- title content, centered in the cloth area left of the band ---
+    const cw = bx, cx = cw / 2;
     ctx.textAlign = 'center';
-    text(ctx, '✝', W / 2, H * 0.30, `300 60px ${SERIF}`, cv.foil, 'middle');
-
-    ctx.save();
+    text(ctx, '✝', cx, H * 0.30, `300 54px ${SERIF}`, cv.foil, 'middle');
     ctx.fillStyle = cv.foil; ctx.textBaseline = 'middle';
-    wrapCentered(ctx, o.title || 'Life Journal', W / 2, H * 0.40, W - 220, 66, `700 64px ${SERIF}`);
-    ctx.restore();
-
-    ctx.save();
+    wrapCentered(ctx, o.title || 'Life Journal', cx, H * 0.42, cw - 130, 54, `700 52px ${SERIF}`);
     ctx.strokeStyle = cv.foil; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(W / 2 - 60, H * 0.475); ctx.lineTo(W / 2 + 60, H * 0.475); ctx.stroke();
-    ctx.restore();
-
-    ctx.save();
+    ctx.beginPath(); ctx.moveTo(cx - 48, H * 0.515); ctx.lineTo(cx + 48, H * 0.515); ctx.stroke();
     ctx.fillStyle = cv.foil; ctx.globalAlpha = 0.95; ctx.textBaseline = 'middle';
-    wrapCentered(ctx, cv.verse, W / 2, H * 0.56, W - 240, 30, `italic 21px ${SERIF}`);
-    ctx.restore();
-
+    wrapCentered(ctx, cv.verse, cx, H * 0.60, cw - 150, 27, `italic 18px ${SERIF}`);
+    ctx.globalAlpha = 1;
     setLetterSpacing(ctx, 2);
-    text(ctx, 'THIS JOURNAL BELONGS TO', W / 2, H * 0.86, `600 13px ${SANS}`, cv.foil, 'middle');
+    text(ctx, 'THIS JOURNAL BELONGS TO', cx, H * 0.86, `600 12px ${SANS}`, cv.foil, 'middle');
     setLetterSpacing(ctx, 0);
     ctx.save(); ctx.strokeStyle = cv.foil; ctx.globalAlpha = 0.6;
-    ctx.beginPath(); ctx.moveTo(W / 2 - 150, H * 0.89); ctx.lineTo(W / 2 + 150, H * 0.89); ctx.stroke(); ctx.restore();
+    ctx.beginPath(); ctx.moveTo(cx - 120, H * 0.89); ctx.lineTo(cx + 120, H * 0.89); ctx.stroke(); ctx.restore();
     ctx.textAlign = 'left';
   }
 
@@ -353,34 +361,85 @@ window.LJTemplates = (function () {
     ctx.restore();
   }
 
+  // Shared daily-page geometry so the drawn boxes and the interactive overlay
+  // (tappable checks + "now" marker) never drift apart.
+  const SCHED_HOURS = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21];
+  function planDayLayout() {
+    const schedW = 410, rx = M + schedW + 40, rw = W - M - rx;
+    return { schedW, rx, rw, schedX: M, schedTop: M + 180, schedRowH: 52,
+             prioTop: M + 180, prioGap: 56, taskTop: M + 420, taskGap: 56 };
+  }
+  function planDayCheckRects() {
+    const L = planDayLayout(), out = [];
+    for (let i = 0; i < 3; i++) out.push({ id: 'prio' + i, x: L.rx + L.rw - 26, y: L.prioTop + i * L.prioGap - 18, size: 20 });
+    for (let i = 0; i < 6; i++) out.push({ id: 'task' + i, x: L.rx, y: L.taskTop + i * L.taskGap - 14, size: 18 });
+    return out;
+  }
+
   function planDay(ctx, o) {
-    const P = LJPlanner, d = P.partsFor(o.date);
+    const P = LJPlanner, d = P.partsFor(o.date), L = planDayLayout();
     label(ctx, d.weekdayName, M, M + 40, { size: 26, color: COLORS.ink });
     text(ctx, d.long, M, M + 74, `400 18px ${SANS}`, COLORS.softInk);
     text(ctx, '‹ ' + d.monthName, W - M - 170, M + 38, `500 15px ${SANS}`, COLORS.accent);
     hline(ctx, M, M + 96, W - 2 * M, COLORS.rule);
-    const hours = ['6', '7', '8', '9', '10', '11', '12', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+    const labels = ['6', '7', '8', '9', '10', '11', '12', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
     label(ctx, 'Schedule', M, M + 138, { size: 14 });
-    const schedW = 410;
-    hours.forEach((h, i) => {
-      const y = M + 180 + i * 52;
+    labels.forEach((h, i) => {
+      const y = L.schedTop + i * L.schedRowH;
       text(ctx, h, M + 24, y, `500 13px ${SANS}`, COLORS.softInk);
-      hline(ctx, M + 44, y, schedW - 44, COLORS.faint);
+      hline(ctx, M + 44, y, L.schedW - 44, COLORS.faint);
     });
-    const rx = M + schedW + 40, rw = W - M - rx;
-    label(ctx, 'Top Priorities', rx, M + 138, { size: 14 });
+    label(ctx, 'Top Priorities', L.rx, M + 138, { size: 14 });
     for (let i = 0; i < 3; i++) {
-      const y = M + 180 + i * 56;
-      text(ctx, (i + 1) + '.', rx, y, `600 17px ${SERIF}`, COLORS.softInk);
-      hline(ctx, rx + 30, y, rw - 30, COLORS.faint);
+      const y = L.prioTop + i * L.prioGap;
+      text(ctx, (i + 1) + '.', L.rx, y, `600 17px ${SERIF}`, COLORS.softInk);
+      hline(ctx, L.rx + 30, y, L.rw - 70, COLORS.faint);
     }
-    label(ctx, 'Notes / Tasks', rx, M + 382, { size: 14 });
+    label(ctx, 'Notes / Tasks', L.rx, M + 382, { size: 14 });
     for (let i = 0; i < 6; i++) {
-      const y = M + 420 + i * 56;
-      checkbox(ctx, rx, y - 14, 18); hline(ctx, rx + 28, y, rw - 28, COLORS.faint);
+      const y = L.taskTop + i * L.taskGap;
+      hline(ctx, L.rx + 28, y, L.rw - 28, COLORS.faint);
     }
-    label(ctx, "Today's Verse", rx, M + 782, { size: 14 });
-    ruled(ctx, rx, M + 814, rw, 2, 36);
+    label(ctx, "Today's Verse", L.rx, M + 782, { size: 14 });
+    ruled(ctx, L.rx, M + 814, L.rw, 2, 36);
+    // checkbox outlines (interactive overlay sits on top)
+    planDayCheckRects().forEach((r) => checkbox(ctx, r.x, r.y, r.size));
+  }
+
+  // Interactive checkbox rects for a template (empty = none).
+  function checkRects(template) {
+    if (template === 'planDay') return planDayCheckRects();
+    if (template === 'dailyPlanner') {
+      const rx = M + 450, out = [];
+      for (let i = 0; i < 6; i++) out.push({ id: 'task' + i, x: rx, y: M + 358 + i * 56 - 14, size: 18 });
+      return out;
+    }
+    if (template === 'notesTasks') {
+      const out = [];
+      for (let i = 0; i < 18; i++) out.push({ id: 'task' + i, x: M, y: M + 80 + i * 62 - 14, size: 20 });
+      return out;
+    }
+    if (template === 'prayerList') {
+      const colW = (W - 2 * M) / 2 - 20, out = [];
+      for (let i = 0; i < 9; i++) {
+        out.push({ id: 'req' + i, x: M, y: M + 140 + i * 110, size: 20 });
+        out.push({ id: 'ans' + i, x: M + colW + 40, y: M + 140 + i * 110, size: 20 });
+      }
+      return out;
+    }
+    return [];
+  }
+
+  // A live "you are here" marker for the daily schedule, only on today's page.
+  function nowMarker(page) {
+    if (page.template !== 'planDay' || !page.date || !window.LJPlanner) return null;
+    if (page.date !== LJPlanner.todayISO()) return null;
+    const now = new Date(), hour = now.getHours() + now.getMinutes() / 60;
+    if (hour < SCHED_HOURS[0] || hour > SCHED_HOURS[SCHED_HOURS.length - 1] + 1) return null;
+    const L = planDayLayout();
+    const y = L.schedTop + (hour - SCHED_HOURS[0]) * L.schedRowH;
+    const label = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    return { x: L.schedX, y: y, w: L.schedW, label: label };
   }
 
   function planWeek(ctx, o) {
@@ -454,5 +513,5 @@ window.LJTemplates = (function () {
     ctx.restore();
   }
 
-  return { draw };
+  return { draw, checkRects, nowMarker };
 })();
