@@ -17,7 +17,10 @@
         <span class="brand-cross">✝</span>
         <h1>Life Journal</h1>
       </div>
-      <button id="newJournalBtn" class="btn primary">+ New Journal</button>
+      <div class="header-actions">
+        <button id="syncBtn" class="btn" title="Sync across devices">☁ Sync</button>
+        <button id="newJournalBtn" class="btn primary">+ New Journal</button>
+      </div>
     </header>
     <div id="shelf" class="shelf"></div>
     <p class="lib-foot">A Christian journal you write by hand — your handwriting is saved in this browser.</p>
@@ -93,6 +96,24 @@
     </div>
   </div>
 
+  <!-- Cloud sync modal -->
+  <div id="syncModal" class="modal hidden">
+    <div class="modal-card">
+      <h2>Cloud Sync</h2>
+      <p class="sync-note">Enter the <strong>same sync code</strong> on each device to share your journals. Keep it private — anyone with the code can read and overwrite your data. Choose something long and personal.</p>
+      <label class="field-label">Sync code</label>
+      <input id="syncCode" class="text-input" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="e.g. grace-and-peace-2026" />
+      <div class="sync-buttons">
+        <button id="syncUpload" class="btn primary">⬆ Upload this device → cloud</button>
+        <button id="syncDownload" class="btn">⬇ Download cloud → this device</button>
+      </div>
+      <p id="syncStatus" class="sync-status"></p>
+      <div class="modal-actions">
+        <button id="syncClose" class="btn">Close</button>
+      </div>
+    </div>
+  </div>
+
   <div id="toast" class="toast hidden"></div>
 
   <script src="js/data.js"></script>
@@ -101,6 +122,7 @@
   <script src="js/store.js"></script>
   <script src="js/canvas.js"></script>
   <script src="js/pdf.js"></script>
+  <script src="js/sync.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

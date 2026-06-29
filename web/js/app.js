@@ -476,6 +476,46 @@
     toast._t = setTimeout(() => t.classList.add('hidden'), 2200);
   }
 
+  // ---------- Cloud sync ----------
+  function openSync() {
+    $('#syncCode').value = LJSync.getCode();
+    setSyncStatus('', false);
+    $('#syncModal').classList.remove('hidden');
+  }
+  function setSyncStatus(msg, isErr) {
+    const s = $('#syncStatus');
+    s.textContent = msg;
+    s.classList.toggle('err', !!isErr);
+  }
+  function fmtKB(n) { return n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; }
+
+  async function doSync(kind) {
+    const code = $('#syncCode').value.trim();
+    if (code.length < 6) { setSyncStatus('Please enter a sync code of at least 6 characters.', true); return; }
+    LJSync.setCode(code);
+    $('#syncUpload').disabled = $('#syncDownload').disabled = true;
+    try {
+      if (kind === 'upload') {
+        setSyncStatus('Uploading…', false);
+        const r = await LJSync.upload(code);
+        setSyncStatus(`Uploaded ✓  (${fmtKB(r.size)}). Use this code on another device to pull it down.`, false);
+      } else {
+        if (!confirm('Download replaces the journals on THIS device with the cloud copy for this code. Continue?')) {
+          $('#syncUpload').disabled = $('#syncDownload').disabled = false;
+          return;
+        }
+        setSyncStatus('Downloading…', false);
+        const r = await LJSync.download(code);
+        if (r.empty) { setSyncStatus('No cloud data found for that code yet. Upload from a device first.', true); }
+        else { setSyncStatus('Downloaded ✓  Reloading…', false); setTimeout(() => location.reload(), 700); }
+      }
+    } catch (e) {
+      setSyncStatus('Sync failed: ' + e.message, true);
+    } finally {
+      $('#syncUpload').disabled = $('#syncDownload').disabled = false;
+    }
+  }
+
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, (c) =>
       ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -487,6 +527,10 @@
     buildSwatches();
 
     $('#newJournalBtn').onclick = openNewJournal;
+    $('#syncBtn').onclick = openSync;
+    $('#syncClose').onclick = () => $('#syncModal').classList.add('hidden');
+    $('#syncUpload').onclick = () => doSync('upload');
+    $('#syncDownload').onclick = () => doSync('download');
     $('#njCancel').onclick = () => $('#newJournalModal').classList.add('hidden');
     $('#njCreate').onclick = createJournal;
 

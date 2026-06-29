@@ -1,0 +1,9 @@
+{
+  "name": "life-journal",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Life Journal web app — serverless sync API",
+  "dependencies": {
+    "@vercel/blob": "^2.5.0"
+  }
+}
