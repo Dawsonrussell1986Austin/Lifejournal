@@ -118,6 +118,12 @@
   function goToMonth(m) { const i = state.monthIndex[m]; if (i != null) loadPage(i); }
   function goToYear() { if (state.yearPageIndex >= 0) loadPage(state.yearPageIndex); }
 
+  function jumpToToday() {
+    const iso = LJPlanner.todayISO();
+    if (state.dateIndex[iso] != null) { goToDate(iso); toast('Today · ' + LJPlanner.partsFor(iso).long); }
+    else toast('Today isn’t in this journal’s year');
+  }
+
   function openJournal(id) {
     state.journal = state.lib.journals.find((x) => x.id === id);
     if (!state.journal) return;
@@ -126,6 +132,7 @@
     $('#library').classList.add('hidden');
     $('#editor').classList.remove('hidden');
     $('#editorTitle').textContent = state.journal.title;
+    $('#todayBtn').style.display = state.journal.kind === 'planner' ? '' : 'none';
     if (!state.canvas) {
       state.canvas = new JournalCanvas($('#bgCanvas'), $('#inkCanvas'), $('#pageWrap'));
       state.canvas.onChange = () => saveCurrentDebounced();
@@ -479,6 +486,7 @@
     $('#prevPageBtn').onclick = () => loadPage(state.pageIndex - 1);
     $('#nextPageBtn').onclick = () => loadPage(state.pageIndex + 1);
     $('#pageCountBtn').onclick = openPagesView;
+    $('#todayBtn').onclick = jumpToToday;
     $('#addPageBtn').onclick = openTemplatePicker;
     $('#deletePageBtn').onclick = deletePage;
     $('#pickerClose').onclick = closePicker;

@@ -85,6 +85,24 @@ window.LJPlanner = (function () {
   // Tappable header on day / sermon pages → that month's calendar.
   function headerBackRect() { return { x: M, y: M, w: 360, h: 96 }; }
 
+  // ---- Week view geometry ----
+  function weekRowGeom() {
+    const top = M + 132;
+    return { top, rowH: (PAGE.H - top - M) / 7 };
+  }
+  function weekDayRects(weekStart) {
+    const g = weekRowGeom(), p = parseISO(weekStart), base = Date.UTC(p.y, p.m, p.d), out = [];
+    for (let i = 0; i < 7; i++) {
+      out.push({ date: isoFromTs(base + i * DAY_MS), x: M, y: g.top + i * g.rowH, w: PAGE.W - 2 * M, h: g.rowH });
+    }
+    return out;
+  }
+
+  function todayISO() {
+    const d = new Date();
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+
   // ---- Journal generation ----
   function generate(year) {
     const uid = LJData.uid;
