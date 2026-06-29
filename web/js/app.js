@@ -166,11 +166,9 @@
     state.canvas.setStrokes(data.strokes);
     state.texts = data.texts || [];
     state.checks = data.checks || {};
-    state.body = data.body || '';
+    state.fields = data.fields || {};
     state.selectedTextId = null;
-    const tl = $('#typeLayer');
-    if (tl) tl.innerText = state.body;
-    layoutTypeLayer();
+    renderFieldLayer();
     renderTextLayer();
     renderLinkLayer();
     renderPhotoLayer();
@@ -178,27 +176,56 @@
     updatePageMeta();
   }
 
-  function layoutTypeLayer() {
-    const tl = $('#typeLayer');
-    if (!tl || !state.canvas) return;
+  // Render the typed fields for the current page. Inputs are editable only in
+  // type mode; in draw mode they show their text read-only beneath the ink.
+  function renderFieldLayer() {
+    const layer = $('#typeLayer');
+    if (!layer) return;
+    layer.innerHTML = '';
+    const page = currentPage();
+    if (!page || !state.canvas) return;
     const s = state.canvas.scaleFactor || 1;
-    tl.style.padding = (LJData.PAGE.M * s) + 'px';
-    tl.style.fontSize = (30 * s) + 'px';
-    tl.style.lineHeight = '1.5';
+    const fields = LJTemplates.fieldRects(page.template) || [];
+    const isType = state.mode === 'type';
+    fields.forEach((f, idx) => {
+      const inp = document.createElement('input');
+      inp.type = 'text';
+      inp.className = 'lj-field';
+      inp.value = state.fields[f.id] || '';
+      inp.readOnly = !isType;
+      inp.dataset.idx = idx;
+      const size = f.size || 26;
+      inp.style.left = (f.x * s) + 'px';
+      inp.style.top = ((f.y - size) * s) + 'px';
+      inp.style.width = (f.w * s) + 'px';
+      inp.style.height = (size * 1.35 * s) + 'px';
+      inp.style.fontSize = (size * 0.86 * s) + 'px';
+      inp.addEventListener('input', () => { state.fields[f.id] = inp.value; saveCurrentDebounced(); });
+      inp.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === 'Tab') {
+          e.preventDefault();
+          const next = layer.querySelector('.lj-field[data-idx="' + (idx + (e.shiftKey ? -1 : 1)) + '"]');
+          if (next) next.focus();
+        }
+      });
+      layer.appendChild(inp);
+    });
   }
 
   function setMode(mode) {
     state.mode = mode;
-    const tl = $('#typeLayer');
+    const layer = $('#typeLayer');
     const isType = mode === 'type';
-    tl.classList.toggle('typing', isType);
-    tl.contentEditable = isType ? 'true' : 'false';
+    layer.classList.toggle('typing', isType);
     $('#typeModeBtn').classList.toggle('active', isType);
+    renderFieldLayer();
     if (isType) {
       $('#inkCanvas').style.pointerEvents = 'none';
       $('#textLayer').classList.remove('active');
-      tl.focus();
-      toast('Type mode — just start typing');
+      const first = layer.querySelector('.lj-field');
+      if (first) first.focus();
+      const n = (LJTemplates.fieldRects(currentPage().template) || []).length;
+      toast(n ? 'Type mode — tap a line, Enter/Tab for the next' : 'No typed fields on this page');
     } else {
       $('#inkCanvas').style.pointerEvents = (state.tool === 'text') ? 'none' : 'auto';
     }
@@ -212,7 +239,7 @@
   function relayout() {
     const stage = $('#stage');
     state.canvas.layout(stage.clientWidth - 44, stage.clientHeight - 44);
-    layoutTypeLayer();
+    renderFieldLayer();
     renderTextLayer(); // reposition text boxes for the new scale
     renderLinkLayer(); // reposition calendar links
     renderPhotoLayer(); // reposition the month photo
@@ -220,7 +247,7 @@
   }
 
   function pageData() {
-    return { strokes: state.canvas ? state.canvas.strokes : [], texts: state.texts, checks: state.checks, body: state.body };
+    return { strokes: state.canvas ? state.canvas.strokes : [], texts: state.texts, checks: state.checks, fields: state.fields };
   }
   function saveCurrentDebounced() {
     const id = currentPage().id;
@@ -741,10 +768,6 @@
     });
 
     $('#typeModeBtn').onclick = () => setMode(state.mode === 'type' ? 'draw' : 'type');
-    $('#typeLayer').addEventListener('input', () => {
-      state.body = $('#typeLayer').innerText;
-      saveCurrentDebounced();
-    });
 
     const pencilBtn = $('#pencilOnlyBtn');
     pencilBtn.onclick = () => {

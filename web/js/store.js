@@ -54,16 +54,16 @@ window.LJStore = (function () {
       const raw = LJKV.get(pageKey(pageId));
       if (raw) {
         const v = JSON.parse(raw);
-        if (Array.isArray(v)) return { strokes: v, texts: [], checks: {}, body: '' };
-        return { strokes: v.strokes || [], texts: v.texts || [], checks: v.checks || {}, body: v.body || '' };
+        if (Array.isArray(v)) return { strokes: v, texts: [], checks: {}, fields: {} };
+        return { strokes: v.strokes || [], texts: v.texts || [], checks: v.checks || {}, fields: v.fields || {} };
       }
     } catch (e) {}
-    return { strokes: [], texts: [], checks: {}, body: '' };
+    return { strokes: [], texts: [], checks: {}, fields: {} };
   }
 
   function savePageData(pageId, data) {
     LJKV.set(pageKey(pageId), JSON.stringify({
-      strokes: data.strokes || [], texts: data.texts || [], checks: data.checks || {}, body: data.body || ''
+      strokes: data.strokes || [], texts: data.texts || [], checks: data.checks || {}, fields: data.fields || {}
     }));
   }
 

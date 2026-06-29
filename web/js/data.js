@@ -39,6 +39,10 @@ window.LJData = (function () {
     weeklySchedule:  { name: 'Weekly Schedule',          sub: 'A week at a glance' },
     monthlyCalendar: { name: 'Monthly Calendar',         sub: 'A full month grid' },
     notesTasks:      { name: 'Notes / Tasks',            sub: 'Open notes with a task column' },
+    foundationsDaily:{ name: 'Foundations Daily',        sub: 'Thankful · schedule · top 3 · daily steps' },
+    weeklyPrayer:    { name: 'Weekly Prayer Journal',    sub: '90-day prayer · weekly focus · provision' },
+    weeklyFoundations:{ name: 'Weekly Five Foundations', sub: 'Goals · progress · prayer · habit tracking' },
+    teachingNotes:   { name: 'Teaching Notes',           sub: 'Sermon / teaching / podcast notes' },
     lined:           { name: 'Lined',                    sub: 'Ruled writing lines' },
     dotted:          { name: 'Dotted',                   sub: 'Dot grid for free-form layout' },
     blank:           { name: 'Blank',                    sub: 'A clean blank page' },
@@ -51,6 +55,7 @@ window.LJData = (function () {
   };
 
   const INSERTABLE = [
+    'foundationsDaily', 'weeklyPrayer', 'weeklyFoundations', 'teachingNotes',
     'soap', 'sermonNotes', 'prayerList', 'gratitude', 'dailyPlanner',
     'weeklyTop3', 'weeklySchedule', 'monthlyCalendar', 'notesTasks',
     'lined', 'dotted', 'blank'

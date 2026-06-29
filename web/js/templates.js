@@ -425,7 +425,81 @@ window.LJTemplates = (function () {
       }
       return out;
     }
+    if (template === 'foundationsDaily') {
+      const L = foundationsDailyLayout(), out = [];
+      for (let i = 0; i < 3; i++) out.push({ id: 'top' + i, x: L.rx + L.rw - 26, y: L.top3Y + i * L.top3Gap - 16, size: 20 });
+      for (let i = 0; i < 5; i++) out.push({ id: 'step' + i, x: L.rx + L.rw - 26, y: L.stepsY + i * L.stepsGap - 14, size: 18 });
+      return out;
+    }
+    if (template === 'weeklyFoundations') {
+      const L = weeklyFoundationsLayout(), out = [];
+      for (let i = 0; i < 5; i++) out.push({ id: 'wprog' + i, x: W - M - 26, y: L.progY + i * L.progGap - 14, size: 18 });
+      return out;
+    }
     return [];
+  }
+
+  // ---- Typed fields: where you can click-and-type into a template's slots ----
+  function lineFields(prefix, x, y0, w, count, gap, size) {
+    const out = [];
+    for (let i = 0; i < count; i++) out.push({ id: prefix + i, x: x, y: y0 + i * gap, w: w, size: size || 28 });
+    return out;
+  }
+  function planDayFields() {
+    const L = planDayLayout(), f = [];
+    for (let i = 0; i < 16; i++) f.push({ id: 'sch' + i, x: M + 44, y: L.schedTop + i * L.schedRowH, w: L.schedW - 44, size: 24 });
+    for (let i = 0; i < 3; i++) f.push({ id: 'pri' + i, x: L.rx + 30, y: L.prioTop + i * L.prioGap, w: L.rw - 70, size: 26 });
+    for (let i = 0; i < 6; i++) f.push({ id: 'tsk' + i, x: L.rx + 28, y: L.taskTop + i * L.taskGap, w: L.rw - 28, size: 24 });
+    for (let i = 0; i < 2; i++) f.push({ id: 'vrs' + i, x: L.rx, y: M + 814 + i * 36, w: L.rw, size: 22 });
+    return f;
+  }
+  function dailyPlannerFields() {
+    const schedW = 410, rx = M + schedW + 40, rw = W - M - rx, f = [];
+    for (let i = 0; i < 16; i++) f.push({ id: 'sch' + i, x: M + 44, y: M + 120 + i * 52, w: schedW - 44, size: 24 });
+    for (let i = 0; i < 3; i++) f.push({ id: 'pri' + i, x: rx + 30, y: M + 118 + i * 56, w: rw - 30, size: 26 });
+    for (let i = 0; i < 6; i++) f.push({ id: 'tsk' + i, x: rx + 28, y: M + 358 + i * 56, w: rw - 28, size: 24 });
+    for (let i = 0; i < 2; i++) f.push({ id: 'vrs' + i, x: rx, y: M + 752 + i * 36, w: rw, size: 22 });
+    return f;
+  }
+  function foundationsDailyFields() {
+    const L = foundationsDailyLayout(), f = [];
+    f.push({ id: 'th0', x: M, y: M + 100, w: W - 2 * M, size: 24 });
+    f.push({ id: 'th1', x: M, y: M + 130, w: W - 2 * M, size: 24 });
+    for (let i = 0; i < 15; i++) f.push({ id: 'sch' + i, x: M + 34, y: L.secY + 34 + i * 46, w: 360 - 34, size: 22 });
+    for (let i = 0; i < 3; i++) f.push({ id: 'top' + i, x: L.rx + 26, y: L.top3Y + i * L.top3Gap, w: L.rw - 60, size: 24 });
+    for (let i = 0; i < 5; i++) f.push({ id: 'step' + i, x: L.rx + 96, y: L.stepsY + i * L.stepsGap, w: L.rw - 96 - 34, size: 22 });
+    return f;
+  }
+  function weeklyPrayerFields() {
+    let f = lineFields('p', M, M + 116, W - 2 * M, 6, 30, 24);
+    f = f.concat(lineFields('w', M, M + 380, W - 2 * M, 9, 40, 26));
+    f = f.concat(lineFields('g', M, M + 790, W - 2 * M, 7, 30, 24));
+    return f;
+  }
+  function weeklyFoundationsFields() {
+    const L = weeklyFoundationsLayout(), f = [];
+    for (let i = 0; i < 5; i++) f.push({ id: 'goal' + i, x: M + 110, y: M + 124 + i * 40, w: W - 2 * M - 110, size: 22 });
+    for (let i = 0; i < 5; i++) f.push({ id: 'prog' + i, x: M + 96, y: L.progY + i * L.progGap, w: W - 2 * M - 96 - 40, size: 22 });
+    f.push({ id: 'fpray', x: M, y: L.prayerY + 26, w: W - 2 * M, size: 22 });
+    return f.concat(lineFields('hab', M, L.habitY + 42, W - 2 * M, 5, 38, 22));
+  }
+
+  function fieldRects(template) {
+    switch (template) {
+      case 'planDay': return planDayFields();
+      case 'dailyPlanner': return dailyPlannerFields();
+      case 'foundationsDaily': return foundationsDailyFields();
+      case 'weeklyPrayer': return weeklyPrayerFields();
+      case 'weeklyFoundations': return weeklyFoundationsFields();
+      case 'notesTasks': return lineFields('n', M + 32, M + 80, W - 2 * M - 32, 18, 62, 26);
+      case 'teachingNotes': return lineFields('t', M, M + 154, W - 2 * M, 23, 46, 26);
+      case 'sermonNotes': return lineFields('m', M, M + 214, W - 2 * M, 11, 46, 26);
+      case 'gratitude': return lineFields('g', M + 30, M + 150, W - 2 * M - 30, 5, 64, 28);
+      case 'lined': return lineFields('l', M, M + 48, W - 2 * M, 26, 48, 28);
+      case 'dotted': return lineFields('l', M, M + 42, W - 2 * M, 28, 42, 26);
+      case 'blank': return lineFields('l', M, M + 60, W - 2 * M, 22, 54, 30);
+      default: return [];
+    }
   }
 
   // A live "you are here" marker for the daily schedule, only on today's page.
@@ -477,6 +551,97 @@ window.LJTemplates = (function () {
     ruled(ctx, M + colW + 32, M + 790, colW, 2, 36);
   }
 
+  // ---- Five Foundations templates (interactive Christian planner) ----
+  function dotLine(ctx, x, y, w, color) {
+    ctx.save(); ctx.fillStyle = color || COLORS.rule;
+    for (let xx = x; xx <= x + w; xx += 16) { ctx.beginPath(); ctx.arc(xx, y, 1.3, 0, Math.PI * 2); ctx.fill(); }
+    ctx.restore();
+  }
+  function dotRows(ctx, x, y, w, count, gap) { for (let i = 0; i < count; i++) dotLine(ctx, x, y + i * gap, w); }
+  function dayHeads(ctx, x, y, w) {
+    const D = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'], cw = w / 7;
+    ctx.save(); ctx.textAlign = 'center';
+    D.forEach((d, i) => text(ctx, d, x + cw * i + cw / 2, y, `600 11px ${SANS}`, COLORS.softInk));
+    ctx.textAlign = 'left'; ctx.restore();
+  }
+  const FOUND = ['Faith', 'Family', 'Finances', 'Fitness', 'Focus'];
+
+  function foundationsDailyLayout() {
+    const rx = M + 430, rw = W - M - rx;
+    return { rx, rw, secY: M + 250, top3Y: M + 284, top3Gap: 46, stepsY: M + 540, stepsGap: 42 };
+  }
+  function foundationsDaily(ctx, o) {
+    const L = foundationsDailyLayout();
+    label(ctx, 'Daily', M, M + 34, { size: 26, color: COLORS.ink });
+    fieldLine(ctx, 'Date', M + 180, M + 30, 230, 48);
+    setLetterSpacing(ctx, 3); text(ctx, 'S M T W T F S', W - M - 200, M + 30, `600 14px ${SANS}`, COLORS.softInk); setLetterSpacing(ctx, 0);
+    label(ctx, 'I am thankful for', M, M + 74, { size: 13 });
+    dotRows(ctx, M, M + 100, W - 2 * M, 2, 30);
+    label(ctx, 'Daily Schedule', M, L.secY, { size: 13 });
+    const hrs = ['6', '7', '8', '9', '10', '11', '12', '1', '2', '3', '4', '5', '6', '7', '8'];
+    hrs.forEach((h, i) => { const y = L.secY + 34 + i * 46; text(ctx, h, M + 8, y, `500 12px ${SANS}`, COLORS.softInk); hline(ctx, M + 34, y, 360, COLORS.faint); });
+    label(ctx, "Today's Top 3", L.rx, L.secY, { size: 13 });
+    for (let i = 0; i < 3; i++) { const y = L.top3Y + i * L.top3Gap; text(ctx, (i + 1) + '.', L.rx, y, `600 15px ${SERIF}`, COLORS.softInk); hline(ctx, L.rx + 26, y, L.rw - 60, COLORS.faint); }
+    label(ctx, 'Five Foundations Daily Steps', L.rx, L.stepsY - 30, { size: 13 });
+    FOUND.forEach((f, i) => { const y = L.stepsY + i * L.stepsGap; text(ctx, f.toUpperCase(), L.rx, y, `600 12px ${SANS}`, COLORS.ink); hline(ctx, L.rx + 96, y, L.rw - 96 - 34, COLORS.faint); });
+    const gy = L.stepsY + 5 * L.stepsGap + 26;
+    label(ctx, 'Scripture · Observe & Apply · The Gospel', L.rx, gy, { size: 12 });
+    ruled(ctx, L.rx, gy + 30, L.rw, 3, 38);
+    label(ctx, 'Reading / Listening / Watching', M, H - M - 8, { size: 12 });
+    checkRects('foundationsDaily').forEach((r) => checkbox(ctx, r.x, r.y, r.size));
+  }
+
+  function weeklyPrayer(ctx, o) {
+    label(ctx, 'Prayer Journal', M, M + 36, { size: 22, color: COLORS.ink });
+    label(ctx, '90 Day Prayer', M, M + 86, { size: 13, color: COLORS.ink });
+    caption(ctx, 'Write one prayer to pray each day for the next 90 days.', M + 210, M + 86);
+    dotRows(ctx, M, M + 116, W - 2 * M, 6, 30);
+    label(ctx, 'Weekly Prayer Focus', M, M + 336, { size: 13, color: COLORS.ink });
+    caption(ctx, 'Who and what will you pray for this week?', M + 250, M + 336);
+    dayHeads(ctx, M, M + 360, W - 2 * M);
+    ruled(ctx, M, M + 380, W - 2 * M, 9, 40);
+    label(ctx, "God's Provision", M, M + 760, { size: 13, color: COLORS.ink });
+    caption(ctx, 'How has God answered or worked this week?', M + 210, M + 760);
+    dotRows(ctx, M, M + 790, W - 2 * M, 7, 30);
+  }
+
+  function weeklyFoundationsLayout() {
+    return { progLabelY: M + 340, progY: M + 376, progGap: 40, prayerY: M + 600, habitY: M + 760 };
+  }
+  function weeklyFoundations(ctx, o) {
+    const L = weeklyFoundationsLayout();
+    label(ctx, 'Five Foundations', M, M + 36, { size: 22, color: COLORS.ink });
+    label(ctx, 'Five Foundations Goals', M, M + 86, { size: 13, color: COLORS.ink });
+    caption(ctx, 'Re-write your 13-week goals.', M + 250, M + 86);
+    FOUND.forEach((f, i) => fieldLine(ctx, f, M, M + 124 + i * 40, W - 2 * M, 110));
+    label(ctx, 'Weekly Progress', M, L.progLabelY, { size: 13, color: COLORS.ink });
+    caption(ctx, 'Track progress to completing your goals.', M + 220, L.progLabelY);
+    FOUND.forEach((f, i) => { const y = L.progY + i * L.progGap; text(ctx, f.toUpperCase(), M, y, `600 12px ${SANS}`, COLORS.ink); hline(ctx, M + 96, y, W - 2 * M - 96 - 34, COLORS.faint); });
+    label(ctx, 'Five Foundations Prayer', M, L.prayerY, { size: 13, color: COLORS.ink });
+    dotRows(ctx, M, L.prayerY + 26, W - 2 * M, 3, 30);
+    label(ctx, 'Weekly Habit Tracking', M, L.habitY, { size: 13, color: COLORS.ink });
+    dayHeads(ctx, M + 200, L.habitY + 24, W - 2 * M - 360);
+    text(ctx, 'GOAL', W - M - 120, L.habitY + 24, `600 11px ${SANS}`, COLORS.softInk);
+    text(ctx, 'RESULT', W - M - 60, L.habitY + 24, `600 11px ${SANS}`, COLORS.softInk);
+    ruled(ctx, M, L.habitY + 42, W - 2 * M, 5, 38);
+    checkRects('weeklyFoundations').forEach((r) => checkbox(ctx, r.x, r.y, r.size));
+  }
+
+  function teachingNotes(ctx, o) {
+    setLetterSpacing(ctx, 1);
+    text(ctx, 'SERMON / TEACHING / PODCAST / OTHER', M, M + 30, `600 13px ${SANS}`, COLORS.ink);
+    text(ctx, 'LOCATION', W - M - 300, M + 30, `600 13px ${SANS}`, COLORS.softInk);
+    setLetterSpacing(ctx, 0);
+    hline(ctx, W - M - 210, M + 32, 210, COLORS.rule);
+    fieldLine(ctx, 'Date', M, M + 70, 210, 48);
+    fieldLine(ctx, 'Time', M + 240, M + 70, 150, 48);
+    text(ctx, 'AM / PM', M + 410, M + 70, `600 12px ${SANS}`, COLORS.softInk);
+    fieldLine(ctx, 'Speaker', M + 540, M + 70, W - M - (M + 540), 84);
+    setLetterSpacing(ctx, 1); text(ctx, 'TITLE', M, M + 108, `600 13px ${SANS}`, COLORS.softInk); setLetterSpacing(ctx, 0);
+    ctx.fillStyle = COLORS.faint; ctx.fillRect(M + 64, M + 96, W - 2 * M - 64, 16);
+    ruled(ctx, M, M + 154, W - 2 * M, 23, 46);
+  }
+
   function lined(ctx) { ruled(ctx, M, M + 48, W - 2 * M, 26, 48); }
   function dotted(ctx) {
     for (let y = M; y < H - M; y += 42) for (let x = M; x < W - M; x += 42) dot(ctx, x, y, 1.4, COLORS.rule);
@@ -486,7 +651,8 @@ window.LJTemplates = (function () {
   const DRAW = {
     cover, soap, sermonNotes, prayerList, gratitude, dailyPlanner,
     weeklyTop3, weeklySchedule, monthlyCalendar, notesTasks, lined, dotted, blank,
-    planYear, planMonth, planDay, planWeek, planWeekSermon
+    planYear, planMonth, planDay, planWeek, planWeekSermon,
+    foundationsDaily, weeklyPrayer, weeklyFoundations, teachingNotes
   };
 
   // Mix a hex color toward white by `amt` (0..1). Used for the soft paper tint.
@@ -511,5 +677,5 @@ window.LJTemplates = (function () {
     ctx.restore();
   }
 
-  return { draw, checkRects, nowMarker };
+  return { draw, checkRects, nowMarker, fieldRects };
 })();

@@ -152,16 +152,19 @@ html, body {
 .lj-link:hover { background: rgba(74, 95, 80, .10); }
 .lj-link:active { background: rgba(74, 95, 80, .18); }
 
-/* Type layer — a flowing, full-page typed note.
-   Draw mode: read-only, transparent, sits under the ink so you can annotate.
-   Type mode: on top, editable, a clean page to type on. */
-.type-layer {
-  position: absolute; inset: 0; z-index: 1; overflow: auto; pointer-events: none;
+/* Type layer — fillable text fields anchored to the template's slots.
+   Draw mode: read-only, click-through, so typed text shows under the ink.
+   Type mode: editable inputs you can tab/enter between. */
+.type-layer { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+.type-layer.typing { z-index: 6; }
+.lj-field {
+  position: absolute; border: none; background: transparent; outline: none;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-  color: var(--ink); white-space: pre-wrap; word-wrap: break-word; outline: none; background: transparent;
+  color: var(--ink); padding: 0 3px; line-height: 1; pointer-events: none;
 }
-.type-layer.typing { z-index: 6; pointer-events: auto; background: rgba(255, 255, 255, 0.92); cursor: text; }
-.type-layer.typing:empty::before { content: attr(data-placeholder); color: var(--soft-ink); opacity: .55; }
+.type-layer.typing .lj-field { pointer-events: auto; cursor: text; }
+.type-layer.typing .lj-field:hover { background: rgba(74, 95, 80, .07); border-radius: 4px; }
+.type-layer.typing .lj-field:focus { background: rgba(74, 95, 80, .12); border-radius: 4px; }
 .mode-btn { font-size: 13px; font-weight: 600; padding: 6px 11px; }
 
 /* Interactive layer (z5): tappable checkboxes + live "now" marker */
