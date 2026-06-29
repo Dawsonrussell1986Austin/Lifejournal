@@ -1,36 +1,37 @@
-// Persistence in localStorage.
-//   lifejournal.library.v1     -> { journals: [ {id,title,cover,pages:[{id,template}]} ] }
-//   lifejournal.page.<pageId>  -> [ stroke, ... ]
+// Journal/library/photo persistence. Backed by LJKV (IndexedDB + in-memory
+// cache), so reads stay synchronous and writes are durable.
+//   lifejournal.library.v1        -> { journals: [...] }
+//   lifejournal.page.<pageId>     -> { strokes, texts }
+//   lifejournal.photo.<jid>.<m>   -> data URL
 window.LJStore = (function () {
   const LIB_KEY = 'lifejournal.library.v1';
-  const pageKey = (id) => 'lifejournal.page.' + id;
-
   const PLANNER_FLAG = 'lifejournal.planner2026.created';
+  const pageKey = (id) => 'lifejournal.page.' + id;
+  const photoKey = (journalId, month) => 'lifejournal.photo.' + journalId + '.' + month;
 
   function loadLibrary() {
     let lib = null;
     try {
-      const raw = localStorage.getItem(LIB_KEY);
+      const raw = LJKV.get(LIB_KEY);
       if (raw) lib = JSON.parse(raw);
-    } catch (e) { /* ignore */ }
+    } catch (e) { /* corrupt — rebuild below */ }
     if (!lib) lib = { journals: [sampleJournal()] };
 
-    // Seed the pre-made LifeJournal 2026 calendar once. The flag means we won't
-    // recreate it if the user deletes it on purpose.
+    // Seed the pre-made LifeJournal 2026 calendar once (respect deletion).
     const hasPlanner = lib.journals.some((j) => j.kind === 'planner' && j.year === 2026);
-    if (!hasPlanner && !localStorage.getItem(PLANNER_FLAG) && window.LJPlanner) {
+    if (!hasPlanner && !LJKV.get(PLANNER_FLAG) && window.LJPlanner) {
       lib.journals.unshift(LJPlanner.generate(2026));
-      try { localStorage.setItem(PLANNER_FLAG, '1'); } catch (e) {}
+      LJKV.set(PLANNER_FLAG, '1');
     }
     // Bring older planners up to date (e.g. add week pages) without data loss.
-    let changed = false;
-    if (window.LJPlanner) lib.journals.forEach((j) => { if (LJPlanner.migrate(j)) changed = true; });
+    if (window.LJPlanner) lib.journals.forEach((j) => LJPlanner.migrate(j));
+
     saveLibrary(lib);
     return lib;
   }
 
   function saveLibrary(lib) {
-    try { localStorage.setItem(LIB_KEY, JSON.stringify(lib)); } catch (e) {}
+    try { LJKV.set(LIB_KEY, JSON.stringify(lib)); } catch (e) {}
   }
 
   function sampleJournal() {
@@ -48,11 +49,9 @@ window.LJStore = (function () {
     };
   }
 
-  // A page's content is { strokes: [...], texts: [...] }.
-  // Legacy pages were stored as a bare strokes array — handle that too.
   function loadPageData(pageId) {
     try {
-      const raw = localStorage.getItem(pageKey(pageId));
+      const raw = LJKV.get(pageKey(pageId));
       if (raw) {
         const v = JSON.parse(raw);
         if (Array.isArray(v)) return { strokes: v, texts: [] };
@@ -63,29 +62,15 @@ window.LJStore = (function () {
   }
 
   function savePageData(pageId, data) {
-    try {
-      localStorage.setItem(pageKey(pageId), JSON.stringify({
-        strokes: data.strokes || [], texts: data.texts || []
-      }));
-    } catch (e) {}
+    LJKV.set(pageKey(pageId), JSON.stringify({ strokes: data.strokes || [], texts: data.texts || [] }));
   }
 
-  function deletePage(pageId) {
-    try { localStorage.removeItem(pageKey(pageId)); } catch (e) {}
-  }
+  function deletePage(pageId) { LJKV.remove(pageKey(pageId)); }
 
   // Per-month photos for the calendar photobook.
-  const photoKey = (journalId, month) => 'lifejournal.photo.' + journalId + '.' + month;
-  function getPhoto(journalId, month) {
-    try { return localStorage.getItem(photoKey(journalId, month)); } catch (e) { return null; }
-  }
-  function setPhoto(journalId, month, dataURL) {
-    try { localStorage.setItem(photoKey(journalId, month), dataURL); return true; }
-    catch (e) { return false; }
-  }
-  function removePhoto(journalId, month) {
-    try { localStorage.removeItem(photoKey(journalId, month)); } catch (e) {}
-  }
+  function getPhoto(journalId, month) { return LJKV.get(photoKey(journalId, month)); }
+  function setPhoto(journalId, month, dataURL) { return LJKV.set(photoKey(journalId, month), dataURL); }
+  function removePhoto(journalId, month) { LJKV.remove(photoKey(journalId, month)); }
 
   return { loadLibrary, saveLibrary, sampleJournal, loadPageData, savePageData, deletePage,
            getPhoto, setPhoto, removePhoto };

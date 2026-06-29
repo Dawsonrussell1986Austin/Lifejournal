@@ -9,7 +9,7 @@
   };
 
   const state = {
-    lib: LJStore.loadLibrary(),
+    lib: null,            // set during bootstrap, after storage is ready
     journal: null,
     pageIndex: 0,
     canvas: null,
@@ -537,8 +537,22 @@
   // ---------- Cloud sync ----------
   function openSync() {
     $('#syncCode').value = LJSync.getCode();
-    setSyncStatus('', false);
+    const last = LJSync.getLastSync();
+    if (last) {
+      const ago = timeAgo(last.when);
+      setSyncStatus(`Last ${last.kind === 'upload' ? 'uploaded' : 'downloaded'} ${ago}.`, false);
+    } else {
+      setSyncStatus('', false);
+    }
     $('#syncModal').classList.remove('hidden');
+  }
+
+  function timeAgo(ts) {
+    const s = Math.max(1, Math.round((Date.now() - ts) / 1000));
+    if (s < 60) return s + 's ago';
+    const m = Math.round(s / 60); if (m < 60) return m + 'm ago';
+    const h = Math.round(m / 60); if (h < 24) return h + 'h ago';
+    return Math.round(h / 24) + 'd ago';
   }
   function setSyncStatus(msg, isErr) {
     const s = $('#syncStatus');
@@ -558,14 +572,21 @@
         const r = await LJSync.upload(code);
         setSyncStatus(`Uploaded ✓  (${fmtKB(r.size)}). Use this code on another device to pull it down.`, false);
       } else {
-        if (!confirm('Download replaces the journals on THIS device with the cloud copy for this code. Continue?')) {
+        if (!confirm('Download will REPLACE the journals on this device with the cloud copy for this code. This cannot be undone. Continue?')) {
           $('#syncUpload').disabled = $('#syncDownload').disabled = false;
           return;
         }
         setSyncStatus('Downloading…', false);
         const r = await LJSync.download(code);
-        if (r.empty) { setSyncStatus('No cloud data found for that code yet. Upload from a device first.', true); }
-        else { setSyncStatus('Downloaded ✓  Reloading…', false); setTimeout(() => location.reload(), 700); }
+        if (r.empty) {
+          setSyncStatus('No cloud data found for that code yet. Upload from a device first.', true);
+        } else {
+          // Refresh in place (no reload) so we read the just-written data.
+          state.lib = LJStore.loadLibrary();
+          state.journal = null;
+          renderShelf();
+          setSyncStatus('Downloaded ✓  Your journals are now on this device.', false);
+        }
       }
     } catch (e) {
       setSyncStatus('Sync failed: ' + e.message, true);
@@ -674,6 +695,13 @@
     });
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-  else init();
+  async function bootstrap() {
+    LJKV.setOnError((msg) => toast(msg));
+    await LJKV.init();              // open IndexedDB (+ migrate old localStorage)
+    state.lib = LJStore.loadLibrary();
+    init();
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootstrap);
+  else bootstrap();
 })();
