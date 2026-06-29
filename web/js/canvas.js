@@ -1,0 +1,251 @@
+// The handwriting engine: a template background canvas + an ink canvas driven
+// by Pointer Events. Supports Apple Pencil pressure, a highlighter, and a
+// (whole-stroke) eraser. Strokes are stored as vectors in page coordinates so
+// they render crisply at any zoom and export cleanly to PDF.
+window.JournalCanvas = (function () {
+  const { PAGE } = LJData;
+
+  class JournalCanvas {
+    constructor(bgCanvas, inkCanvas, wrap) {
+      this.bg = bgCanvas;
+      this.ink = inkCanvas;
+      this.wrap = wrap;
+      this.bgCtx = bgCanvas.getContext('2d');
+      this.inkCtx = inkCanvas.getContext('2d');
+
+      this.strokes = [];
+      this.current = null;
+      this.tool = 'pen';
+      this.color = '#1f2330';
+      this.baseWidth = 3;
+      this.pencilOnly = false;
+      this.activePointer = null;
+      this.onChange = null;
+
+      this._bindEvents();
+    }
+
+    setTemplate(type, opts) { this.templateType = type; this.templateOpts = opts; this._renderBackground(); }
+    setStrokes(strokes) { this.strokes = strokes || []; this._renderInk(); }
+    setTool(t) { this.tool = t; }
+    setColor(c) { this.color = c; }
+    setWidth(w) { this.baseWidth = w; }
+    setPencilOnly(v) { this.pencilOnly = v; }
+
+    // Fit the page to the available stage size, sizing both canvases for the
+    // device pixel ratio so ink and template stay sharp.
+    layout(stageW, stageH) {
+      const pad = 0;
+      const scale = Math.min((stageW - pad) / PAGE.W, (stageH - pad) / PAGE.H);
+      const cssW = Math.max(1, Math.floor(PAGE.W * scale));
+      const cssH = Math.max(1, Math.floor(PAGE.H * scale));
+      const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      this.wrap.style.width = cssW + 'px';
+      this.wrap.style.height = cssH + 'px';
+      [this.bg, this.ink].forEach((c) => {
+        c.width = Math.floor(PAGE.W * dpr);
+        c.height = Math.floor(PAGE.H * dpr);
+      });
+      this.dpr = dpr;
+      this._scaleCtx(this.bgCtx);
+      this._scaleCtx(this.inkCtx);
+      this._renderBackground();
+      this._renderInk();
+    }
+
+    _scaleCtx(ctx) {
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(this.dpr, this.dpr);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+    }
+
+    _renderBackground() {
+      if (!this.templateType) return;
+      this.bgCtx.clearRect(0, 0, PAGE.W, PAGE.H);
+      LJTemplates.draw(this.bgCtx, this.templateType, this.templateOpts);
+    }
+
+    _renderInk() {
+      this.inkCtx.clearRect(0, 0, PAGE.W, PAGE.H);
+      for (const s of this.strokes) this._drawStroke(this.inkCtx, s);
+    }
+
+    _drawStroke(ctx, s) {
+      const pts = s.points;
+      if (!pts.length) return;
+      ctx.save();
+      ctx.strokeStyle = s.color;
+      ctx.globalAlpha = s.marker ? 0.32 : 1;
+      ctx.globalCompositeOperation = 'source-over';
+      if (pts.length === 1) {
+        ctx.fillStyle = s.color;
+        ctx.beginPath();
+        ctx.arc(pts[0].x, pts[0].y, this._segWidth(s, pts[0].p) / 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        return;
+      }
+      for (let i = 1; i < pts.length; i++) {
+        const a = pts[i - 1], b = pts[i];
+        ctx.beginPath();
+        ctx.lineWidth = this._segWidth(s, (a.p + b.p) / 2);
+        ctx.moveTo(a.x, a.y);
+        const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+        ctx.quadraticCurveTo(a.x, a.y, mx, my);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    _segWidth(s, pressure) {
+      const base = s.width;
+      if (s.marker) return base * 4;
+      const p = pressure == null ? 0.5 : pressure;
+      return base * (0.45 + 1.15 * p);
+    }
+
+    // ---- pointer handling ----
+    _bindEvents() {
+      const ink = this.ink;
+      ink.addEventListener('pointerdown', (e) => this._down(e));
+      ink.addEventListener('pointermove', (e) => this._move(e));
+      ink.addEventListener('pointerup', (e) => this._up(e));
+      ink.addEventListener('pointercancel', (e) => this._up(e));
+      ink.addEventListener('pointerleave', (e) => this._up(e));
+      ink.addEventListener('contextmenu', (e) => e.preventDefault());
+    }
+
+    _shouldIgnore(e) {
+      if (this.pencilOnly && e.pointerType === 'touch') return true;
+      return false;
+    }
+
+    _toPage(e) {
+      const r = this.ink.getBoundingClientRect();
+      return {
+        x: (e.clientX - r.left) / r.width * PAGE.W,
+        y: (e.clientY - r.top) / r.height * PAGE.H,
+        p: e.pressure && e.pressure > 0 ? e.pressure : (e.pointerType === 'pen' ? 0.5 : 0.5)
+      };
+    }
+
+    _down(e) {
+      if (this._shouldIgnore(e)) return;
+      e.preventDefault();
+      this.activePointer = e.pointerId;
+      try { this.ink.setPointerCapture(e.pointerId); } catch (_) {}
+      const pt = this._toPage(e);
+      if (this.tool === 'eraser') { this._erodeAt(pt); return; }
+      this.current = { color: this.color, width: this.baseWidth, marker: this.tool === 'marker', points: [pt] };
+      this._drawDot(pt);
+    }
+
+    _move(e) {
+      if (this.activePointer !== e.pointerId) return;
+      if (this._shouldIgnore(e)) return;
+      e.preventDefault();
+      const events = (e.getCoalescedEvents && e.getCoalescedEvents().length) ? e.getCoalescedEvents() : [e];
+      for (const ev of events) {
+        const pt = this._toPage(ev);
+        if (this.tool === 'eraser') { this._erodeAt(pt); continue; }
+        if (!this.current) continue;
+        const last = this.current.points[this.current.points.length - 1];
+        this.current.points.push(pt);
+        this._drawSegment(last, pt);
+      }
+    }
+
+    _up(e) {
+      if (this.activePointer !== e.pointerId) return;
+      this.activePointer = null;
+      try { this.ink.releasePointerCapture(e.pointerId); } catch (_) {}
+      if (this.current && this.current.points.length) {
+        this.strokes.push(this.current);
+        this._emitChange();
+      }
+      this.current = null;
+    }
+
+    _drawDot(pt) {
+      const ctx = this.inkCtx;
+      ctx.save();
+      ctx.globalAlpha = this.tool === 'marker' ? 0.32 : 1;
+      ctx.fillStyle = this.color;
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, this._segWidth(this.current, pt.p) / 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    _drawSegment(a, b) {
+      const ctx = this.inkCtx;
+      ctx.save();
+      ctx.strokeStyle = this.color;
+      ctx.globalAlpha = this.tool === 'marker' ? 0.32 : 1;
+      ctx.lineWidth = this._segWidth(this.current, (a.p + b.p) / 2);
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      ctx.quadraticCurveTo(a.x, a.y, mx, my);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    _erodeAt(pt) {
+      const r = 18 + this.baseWidth * 2;
+      const before = this.strokes.length;
+      this.strokes = this.strokes.filter((s) => !this._strokeNear(s, pt, r));
+      if (this.strokes.length !== before) { this._renderInk(); this._emitChange(); }
+    }
+
+    _strokeNear(s, pt, r) {
+      for (const p of s.points) {
+        const dx = p.x - pt.x, dy = p.y - pt.y;
+        if (dx * dx + dy * dy <= r * r) return true;
+      }
+      return false;
+    }
+
+    undo() {
+      if (!this.strokes.length) return;
+      this.strokes.pop();
+      this._renderInk();
+      this._emitChange();
+    }
+
+    _emitChange() { if (this.onChange) this.onChange(this.strokes); }
+
+    // Compose template + ink into one canvas for export at a given scale.
+    renderComposite(scale) {
+      const out = document.createElement('canvas');
+      out.width = PAGE.W * scale; out.height = PAGE.H * scale;
+      const ctx = out.getContext('2d');
+      ctx.scale(scale, scale);
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, PAGE.W, PAGE.H);
+      LJTemplates.draw(ctx, this.templateType, this.templateOpts);
+      for (const s of this.strokes) this._drawStroke(ctx, s);
+      return out;
+    }
+  }
+
+  // Stand-alone helper to render any page (used for thumbnails / export).
+  function renderPageCanvas(page, journal, scale) {
+    const out = document.createElement('canvas');
+    out.width = PAGE.W * scale; out.height = PAGE.H * scale;
+    const ctx = out.getContext('2d');
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.scale(scale, scale);
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, PAGE.W, PAGE.H);
+    LJTemplates.draw(ctx, page.template, { title: journal.title, cover: journal.cover });
+    const strokes = LJStore.loadStrokes(page.id);
+    const jc = JournalCanvas.prototype;
+    for (const s of strokes) jc._drawStroke.call({ _segWidth: jc._segWidth }, ctx, s);
+    return out;
+  }
+
+  JournalCanvas.renderPageCanvas = renderPageCanvas;
+  return JournalCanvas;
+})();

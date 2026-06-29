@@ -1,0 +1,3 @@
+# Only the web/ app is deployed; the native iPad project isn't needed on Vercel.
+LifeJournal/
+LifeJournal.xcodeproj/
