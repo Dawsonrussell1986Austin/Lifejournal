@@ -195,7 +195,7 @@
       inp.readOnly = !isType;
       inp.dataset.idx = idx;
       const size = f.size || 26;
-      const fs = size * 0.86 * s;
+      const fs = (size * 0.86 - 2) * s;   // 2pt smaller than the writing line height
       inp.style.left = (f.x * s) + 'px';
       inp.style.width = (f.w * s) + 'px';
       inp.style.fontSize = fs + 'px';
