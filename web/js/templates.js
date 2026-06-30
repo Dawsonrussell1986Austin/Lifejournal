@@ -561,6 +561,19 @@ window.LJTemplates = (function () {
     lineY.forEach((y, i) => f.push({ id: 'day' + i, x: M + 140, y: y, w: W - 2 * M - 140, size: 24 }));
     return f;
   }
+  function sermonNotesFields() {
+    const half = (W - 2 * M) / 2 - 20, colW = (W - 2 * M) / 2 - 16;
+    const f = [
+      { id: 'date', x: M + 48, y: M + 78, w: half - 48, size: 24 },
+      { id: 'speaker', x: M + half + 20 + 74, y: M + 78, w: half - 74, size: 24 },
+      { id: 'series', x: M + 60, y: M + 122, w: half - 60, size: 24 },
+      { id: 'passage', x: M + half + 20 + 74, y: M + 122, w: half - 74, size: 24 }
+    ];
+    f.push(...lineFields('m', M, M + 214, W - 2 * M, 11, 46, 26));
+    f.push(...lineFields('key', M, M + 790, colW, 2, 36, 24));
+    f.push(...lineFields('apply', M + colW + 32, M + 790, colW, 2, 36, 24));
+    return f;
+  }
   function planWeekSermonFields() {
     const half = (W - 2 * M) / 2 - 20, colW = (W - 2 * M) / 2 - 16, f = [];
     f.push({ id: 'speaker', x: M + 74, y: M + 140, w: half - 74, size: 24 });
@@ -584,7 +597,7 @@ window.LJTemplates = (function () {
       case 'planWeekSermon': return planWeekSermonFields();
       case 'notesTasks': return lineFields('n', M + 32, M + 80, W - 2 * M - 32, 18, 62, 26);
       case 'teachingNotes': return lineFields('t', M, M + 154, W - 2 * M, 23, 46, 26);
-      case 'sermonNotes': return lineFields('m', M, M + 214, W - 2 * M, 11, 46, 26);
+      case 'sermonNotes': return sermonNotesFields();
       case 'gratitude': return lineFields('g', M + 30, M + 150, W - 2 * M - 30, 5, 64, 28);
       case 'lined': return lineFields('l', M, M + 48, W - 2 * M, 26, 48, 28);
       case 'dotted': return lineFields('l', M, M + 42, W - 2 * M, 28, 42, 26);
