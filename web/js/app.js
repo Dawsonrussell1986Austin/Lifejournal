@@ -260,7 +260,9 @@
   function flushSave() {
     if (!state.canvas || !state.journal) return;
     clearTimeout(state.saveTimer);
-    LJStore.savePageData(currentPage().id, pageData());
+    const page = currentPage();
+    if (!page) return; // current page was just removed — nothing valid to persist
+    LJStore.savePageData(page.id, pageData());
   }
 
   function addPage(template) {
@@ -277,7 +279,12 @@
     LJStore.deletePage(page.id);
     state.journal.pages.splice(state.pageIndex, 1);
     LJStore.saveLibrary(state.lib);
-    loadPage(Math.min(state.pageIndex, state.journal.pages.length - 1));
+    const target = Math.min(state.pageIndex, state.journal.pages.length - 1);
+    // The outgoing page is gone but the canvas still holds its ink; mark the
+    // index invalid so loadPage's flushSave doesn't write that ink onto the
+    // neighbor that shifted into this slot.
+    state.pageIndex = -1;
+    loadPage(target);
   }
 
   // ---------- Picker modal (pages overview + add-template) ----------

@@ -27,9 +27,12 @@ window.LJSync = (function () {
   }
 
   function applyPayload(p) {
-    if (!p || !p.library) return false;
+    // Validate the payload shape BEFORE the destructive replace below — a thin
+    // or corrupt download must never wipe local pages/photos.
+    if (!p || !p.library || !Array.isArray(p.library.journals)) return false;
+    if (!p.pages || typeof p.pages !== 'object') return false;
     LJKV.keys().forEach((k) => { if (isSyncableKey(k)) LJKV.remove(k); });
-    Object.keys(p.pages || {}).forEach((k) => LJKV.set(k, p.pages[k]));
+    Object.keys(p.pages).forEach((k) => LJKV.set(k, p.pages[k]));
     LJStore.saveLibrary(p.library);
     return true;
   }
@@ -55,7 +58,9 @@ window.LJSync = (function () {
     if (r.status === 204) return { empty: true };
     if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || ('HTTP ' + r.status));
     const p = await r.json();
-    applyPayload(p);
+    if (!applyPayload(p)) {
+      throw new Error('The synced data looks empty or corrupt — nothing was changed on this device.');
+    }
     setLastSync('download');
     return { empty: false, savedAt: p.savedAt };
   }

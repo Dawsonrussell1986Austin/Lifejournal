@@ -44,10 +44,16 @@ window.LJPDF = (function () {
     for (let i = 0; i < journal.pages.length; i++) {
       const page = journal.pages[i];
       if (i > 0) pdf.addPage([W, H], 'portrait');
-      let photo = null;
-      if (page.template === 'planMonth') photo = await loadMonthPhoto(journal, page.month);
-      const canvas = JournalCanvas.renderPageCanvas(page, journal, 2, photo);
-      pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, W, H);
+      // One unrenderable page (e.g. a tainted-canvas toDataURL failure) must not
+      // abort the whole export — leave that page blank and keep going.
+      try {
+        let photo = null;
+        if (page.template === 'planMonth') photo = await loadMonthPhoto(journal, page.month);
+        const canvas = JournalCanvas.renderPageCanvas(page, journal, 2, photo);
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, W, H);
+      } catch (e) {
+        console.error('PDF: skipped page ' + (i + 1), e);
+      }
     }
     const name = (journal.title || 'Life Journal').replace(/[\\/:*?"<>|]/g, '-');
     pdf.save(name + '.pdf');

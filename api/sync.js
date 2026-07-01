@@ -40,10 +40,23 @@ module.exports = async (req, res) => {
     }
 
     if (req.method === 'POST' || req.method === 'PUT') {
+      // The body may arrive already parsed (object), as a string, or — when the
+      // platform body parser is disabled — only on the raw stream. Never fall
+      // back to storing '{}', which would silently clobber a good backup.
       const body = req.body;
-      const payload = (body && typeof body === 'object') ? JSON.stringify(body)
-                    : (typeof body === 'string' ? body : '{}');
-      await put(pathname, payload, {
+      let raw = (body && typeof body === 'object') ? JSON.stringify(body)
+              : (typeof body === 'string' ? body : '');
+      if (!raw) raw = await streamToString(req);
+      raw = (raw || '').trim();
+
+      let parsed = null;
+      try { parsed = JSON.parse(raw); } catch (e) { parsed = null; }
+      if (!parsed || !parsed.library) {
+        res.status(400).json({ error: 'Empty or invalid sync payload.' });
+        return;
+      }
+
+      await put(pathname, JSON.stringify(parsed), {
         access: 'private', addRandomSuffix: false, allowOverwrite: true, contentType: 'application/json'
       });
       res.status(200).json({ ok: true, savedAt: Date.now() });
