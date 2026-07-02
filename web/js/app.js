@@ -225,11 +225,53 @@
     }
   }
 
+  // ---- Scripture autocomplete: book → chapter → verse dropdown ----
+  const sug = { box: null, items: [], sel: -1, inp: null, field: null };
+  function hideSuggest() {
+    if (sug.box) sug.box.remove();
+    sug.box = null; sug.items = []; sug.sel = -1; sug.inp = null; sug.field = null;
+  }
+  function updateSuggest(inp, f) {
+    const items = window.LJBible ? LJBible.suggest(inp.value) : [];
+    hideSuggest();
+    // Don't re-open once the exact current value is the only completion.
+    if (!items.length || (items.length === 1 && items[0].value === inp.value)) return;
+    sug.inp = inp; sug.field = f; sug.items = items; sug.sel = 0;
+    sug.box = el('div', 'lj-suggest');
+    items.forEach((it, i) => {
+      const d = el('div', 'lj-suggest-item' + (i === 0 ? ' sel' : ''), it.label);
+      d.addEventListener('pointerdown', (e) => { e.preventDefault(); acceptSuggest(i); });
+      sug.box.appendChild(d);
+    });
+    sug.box.style.left = inp.style.left;
+    sug.box.style.top = (parseFloat(inp.style.top) + parseFloat(inp.style.height) + 2) + 'px';
+    $('#typeLayer').appendChild(sug.box);
+  }
+  function moveSuggest(delta) {
+    if (!sug.box) return;
+    sug.sel = (sug.sel + delta + sug.items.length) % sug.items.length;
+    [...sug.box.children].forEach((c, i) => c.classList.toggle('sel', i === sug.sel));
+    sug.box.children[sug.sel].scrollIntoView({ block: 'nearest' });
+  }
+  function acceptSuggest(i) {
+    const it = sug.items[i == null ? sug.sel : i];
+    const inp = sug.inp, f = sug.field;
+    if (!it || !inp) return;
+    inp.value = it.value;
+    state.fields[f.id] = it.value;
+    recordChange('field:' + f.id);
+    saveCurrentDebounced();
+    inp.focus();
+    inp.setSelectionRange(inp.value.length, inp.value.length);
+    if (it.done) hideSuggest(); else updateSuggest(inp, f);
+  }
+
   // Render the typed fields for the current page. Inputs are editable only in
   // type mode; in draw mode they show their text read-only beneath the ink.
   function renderFieldLayer() {
     const layer = $('#typeLayer');
     if (!layer) return;
+    hideSuggest();
     layer.innerHTML = '';
     const page = currentPage();
     if (!page || !state.canvas) return;
@@ -257,7 +299,21 @@
         flowField(layer, fields, idx);
         recordChange('field:' + f.id);
         saveCurrentDebounced();
+        if (f.bible) updateSuggest(inp, f);
       });
+      if (f.bible) {
+        // Registered before the nav handler so Enter accepts the suggestion
+        // instead of jumping to the next field while the dropdown is open.
+        inp.addEventListener('keydown', (e) => {
+          if (!sug.box || sug.inp !== inp) return;
+          if (e.key === 'ArrowDown') { e.preventDefault(); moveSuggest(1); }
+          else if (e.key === 'ArrowUp') { e.preventDefault(); moveSuggest(-1); }
+          else if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); e.stopImmediatePropagation(); acceptSuggest(); }
+          else if (e.key === 'Escape') { hideSuggest(); }
+        });
+        inp.addEventListener('focus', () => updateSuggest(inp, f));
+        inp.addEventListener('blur', () => setTimeout(() => { if (sug.inp === inp) hideSuggest(); }, 150));
+      }
       inp.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === 'Tab') {
           e.preventDefault();

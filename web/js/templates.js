@@ -402,7 +402,7 @@ window.LJTemplates = (function () {
     const L = dailyLayout(), f = [];
     for (let i = 0; i < L.thankRows; i++) f.push({ id: 'th' + i, x: M, y: L.thankY + i * L.thankGap, w: L.thankW, size: 22 });
     SCHED_HOURS.forEach((h, i) => f.push({ id: 'sch' + i, x: L.schedLineX, y: L.schedTop + i * L.schedRowH, w: L.schedRight - L.schedLineX, size: 22 }));
-    L.scr.d.forEach((y, i) => f.push({ id: 'scr' + i, x: L.rx, y, w: L.rw, size: 20 }));
+    L.scr.d.forEach((y, i) => f.push({ id: 'scr' + i, x: L.rx, y, w: L.rw, size: 20, bible: i === 0 }));
     L.obs.d.forEach((y, i) => f.push({ id: 'obs' + i, x: L.rx, y, w: L.rw, size: 20 }));
     L.gos.d.forEach((y, i) => f.push({ id: 'gos' + i, x: L.rx, y, w: L.rw, size: 20 }));
     for (let i = 0; i < 3; i++) f.push({ id: 'top' + i, x: L.rx + 26, y: L.top3Y + i * L.top3Gap, w: L.rw - 62, size: 22 });
@@ -538,7 +538,7 @@ window.LJTemplates = (function () {
   function soapFields() {
     const f = [
       { id: 'date', x: W - M - 192, y: M + 24, w: 192, size: 22 },
-      { id: 'passage', x: M + 92, y: M + 80, w: W - 2 * M - 92, size: 24 }
+      { id: 'passage', x: M + 92, y: M + 80, w: W - 2 * M - 92, size: 24, bible: true }
     ];
     let y = M + 150;
     for (let blk = 0; blk < 4; blk++) {
@@ -589,7 +589,7 @@ window.LJTemplates = (function () {
       { id: 'date', x: M + 48, y: M + 78, w: half - 48, size: 24 },
       { id: 'speaker', x: M + half + 20 + 74, y: M + 78, w: half - 74, size: 24 },
       { id: 'series', x: M + 60, y: M + 122, w: half - 60, size: 24 },
-      { id: 'passage', x: M + half + 20 + 74, y: M + 122, w: half - 74, size: 24 }
+      { id: 'passage', x: M + half + 20 + 74, y: M + 122, w: half - 74, size: 24, bible: true }
     ];
     f.push(...lineFields('m', M, M + 214, W - 2 * M, 11, 46, 26));
     f.push(...lineFields('key', M, M + 790, colW, 2, 36, 24));
@@ -599,7 +599,7 @@ window.LJTemplates = (function () {
   function planWeekSermonFields() {
     const half = (W - 2 * M) / 2 - 20, colW = (W - 2 * M) / 2 - 16, f = [];
     f.push({ id: 'speaker', x: M + 74, y: M + 140, w: half - 74, size: 24 });
-    f.push({ id: 'passage', x: M + half + 40 + 74, y: M + 140, w: half - 74, size: 24 });
+    f.push({ id: 'passage', x: M + half + 40 + 74, y: M + 140, w: half - 74, size: 24, bible: true });
     f.push(...lineFields('msg', M, M + 216, W - 2 * M, 11, 46, 26));
     f.push(...lineFields('key', M, M + 790, colW, 2, 36, 24));
     f.push(...lineFields('apply', M + colW + 32, M + 790, colW, 2, 36, 24));

@@ -172,6 +172,12 @@ html, body {
 .paper-swatch.active .paper-chip { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
 .paper-swatch .p-label { font-size: 11px; font-weight: 600; color: var(--soft-ink); margin-top: 5px; }
 .paper-all { display: flex; align-items: center; gap: 8px; margin: 4px 0 2px; font-size: 13px; font-weight: 600; color: var(--soft-ink); cursor: pointer; }
+
+/* Scripture autocomplete dropdown */
+.type-layer .lj-suggest { position: absolute; z-index: 30; min-width: 230px; max-height: 264px; overflow-y: auto; background: #fff; border: 1px solid var(--rule); border-radius: 10px; box-shadow: 0 10px 28px rgba(20,24,32,.16); pointer-events: auto; padding: 4px; }
+.lj-suggest-item { padding: 7px 12px; font-size: 14px; border-radius: 7px; color: var(--ink, #1f2330); cursor: pointer; white-space: nowrap; }
+.lj-suggest-item:hover { background: #f0f2f5; }
+.lj-suggest-item.sel { background: var(--accent); color: #fff; }
 .paper-all input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
 
 /* Interactive layer (z5): tappable checkboxes + live "now" marker */
