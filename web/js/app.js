@@ -25,37 +25,62 @@
   };
 
   // ---------- Library ----------
+  // Rotating verse for the greeting, picked by day of year.
+  const GREET_VERSES = [
+    '“Your word is a lamp to my feet.” — Ps 119:105',
+    '“This is the day the Lord has made.” — Ps 118:24',
+    '“His mercies are new every morning.” — Lam 3:23',
+    '“Be still, and know that I am God.” — Ps 46:10',
+    '“Trust in the Lord with all your heart.” — Prov 3:5'
+  ];
+  function dayOfYear(d) {
+    return Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 86400000);
+  }
+  function renderGreeting() {
+    const now = new Date();
+    const h = now.getHours();
+    const word = h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening';
+    $('#greeting').textContent = `Good ${word}.`;
+    const dateStr = now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+    $('#greetSub').textContent = `${dateStr} · ${GREET_VERSES[dayOfYear(now) % GREET_VERSES.length]}`;
+    const doy = dayOfYear(now);
+    $('#shelfDay').innerHTML = `Day <b>${doy}</b> of ${(now.getFullYear() % 4 === 0) ? 366 : 365}`;
+  }
+
   function renderShelf() {
+    renderGreeting();
     const shelf = $('#shelf');
     shelf.innerHTML = '';
-
-    const add = el('div', 'journal-tile');
-    add.innerHTML = `<div class="jcard new-card">
-        <div class="jcard-icon plus-icon">+</div>
-        <div class="jcard-title">New Journal</div>
-        <div class="jcard-count">Start writing</div>
-      </div>`;
-    add.onclick = openNewJournal;
-    shelf.appendChild(add);
 
     state.lib.journals.forEach((j) => {
       const cv = LJData.COVERS[j.cover] || LJData.COVERS.sage;
       const chip = j.kind === 'planner' ? 'Calendar' : cv.name;
       const tile = el('div', 'journal-tile');
-      const accent = cv.vivid || cv.c1;
-      tile.innerHTML = `<div class="jcard" style="--c:${accent}">
+      const count = j.kind === 'planner'
+        ? `${j.pages.length} pages · Day ${dayOfYear(new Date())}`
+        : `${j.pages.length} page${j.pages.length === 1 ? '' : 's'}`;
+      tile.innerHTML = `<div class="jcard" style="--c1:${cv.c1};--c2:${cv.c2 || cv.c1};--band:${cv.band || 'transparent'}">
+          ${j.kind === 'planner' ? '<div class="jcard-band"></div>' : ''}
           <div class="jcard-top">
-            <div class="jcard-icon" style="background:${accent}">✝</div>
+            <div class="jcard-icon">✝</div>
             <button class="jcard-del" title="Delete journal">🗑</button>
           </div>
           <span class="jcard-chip">${chip}</span>
           <div class="jcard-title">${escapeHtml(j.title)}</div>
-          <div class="jcard-count">${j.pages.length} page${j.pages.length === 1 ? '' : 's'}</div>
+          <div class="jcard-count">${count}</div>
         </div>`;
       tile.querySelector('.jcard-del').onclick = (e) => { e.stopPropagation(); deleteJournal(j.id); };
       tile.onclick = () => openJournal(j.id);
       shelf.appendChild(tile);
     });
+
+    const add = el('div', 'journal-tile');
+    add.innerHTML = `<div class="jcard new-card">
+        <div class="jcard-icon plus-icon">+</div>
+        <div class="jcard-title">Begin a new journal</div>
+      </div>`;
+    add.onclick = openNewJournal;
+    shelf.appendChild(add);
   }
 
   function deleteJournal(id) {
@@ -502,12 +527,40 @@
 
   function closePicker() { $('#pickerModal').classList.add('hidden'); }
 
+  // ---------- Theme ----------
+  const INK_DEFAULT = '#e8ecf2';   // default pen color for the dark theme
+  function themedSwatches() {
+    const base = LJData.SWATCH_COLORS.slice();
+    if (state.theme === 'ink') base[0] = INK_DEFAULT;
+    return base;
+  }
+  function applyTheme(t) {
+    state.theme = t;
+    document.body.dataset.theme = t === 'ink' ? 'ink' : '';
+    LJData.setPalette(t === 'ink' ? 'dark' : 'light');
+    LJKV.set('lifejournal.theme', t);
+    // swap the default pen color when it still matches the old theme's default
+    if (t === 'ink' && state.color === LJData.SWATCH_COLORS[0]) state.color = INK_DEFAULT;
+    if (t !== 'ink' && state.color === INK_DEFAULT) state.color = LJData.SWATCH_COLORS[0];
+    if (state.canvas) state.canvas.setColor(state.color);
+    buildSwatches();
+    // re-draw the page background with the themed palette
+    if (state.journal && state.canvas) {
+      const page = currentPage();
+      state.canvas.setTemplate(page.template, JournalCanvas.templateOpts(page, state.journal));
+    }
+  }
+  function toggleTheme() {
+    applyTheme(state.theme === 'ink' ? 'paper' : 'ink');
+    toast(state.theme === 'ink' ? 'Ink & Glass' : 'Quiet Paper');
+  }
+
   // ---------- Tools ----------
   function buildSwatches() {
     const box = $('#swatches');
     box.innerHTML = '';
-    LJData.SWATCH_COLORS.forEach((color, i) => {
-      const sw = el('div', 'swatch' + (i === 0 ? ' active' : ''));
+    themedSwatches().forEach((color) => {
+      const sw = el('div', 'swatch' + (color === state.color ? ' active' : ''));
       sw.style.background = color;
       sw.onclick = () => {
         box.querySelectorAll('.swatch').forEach((n) => n.classList.remove('active'));
@@ -923,6 +976,8 @@
     $('#dockNew').onclick = openNewJournal;
     $('#dockSync').onclick = openSync;
     $('#dockHome').onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+    $('#dockTheme').onclick = toggleTheme;
+    $('#themeBtn').onclick = toggleTheme;
     $('#photoInput').onchange = (e) => {
       const f = e.target.files && e.target.files[0];
       e.target.value = '';
@@ -1018,6 +1073,11 @@
     LJKV.setOnError((msg) => toast(msg));
     await LJKV.init();              // open IndexedDB (+ migrate old localStorage)
     state.lib = LJStore.loadLibrary();
+    const savedTheme = LJKV.get('lifejournal.theme') || 'paper';
+    state.theme = savedTheme;
+    document.body.dataset.theme = savedTheme === 'ink' ? 'ink' : '';
+    LJData.setPalette(savedTheme === 'ink' ? 'dark' : 'light');
+    if (savedTheme === 'ink') state.color = INK_DEFAULT;
     init();
   }
 

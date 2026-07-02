@@ -337,10 +337,11 @@ window.LJTemplates = (function () {
       ctx.save();
       roundRect(ctx, pb.x, pb.y, pb.w, pb.h, 18);
       const grad = ctx.createLinearGradient(pb.x, pb.y, pb.x, pb.y + pb.h);
-      grad.addColorStop(0, '#e3e8ee'); grad.addColorStop(1, '#cdd5df');
+      grad.addColorStop(0, LJData.COLORS.dark ? '#1b2230' : '#e3e8ee');
+      grad.addColorStop(1, LJData.COLORS.dark ? '#242d3d' : '#cdd5df');
       ctx.fillStyle = grad; ctx.fill();
-      ctx.fillStyle = '#9aa3b0'; ctx.textAlign = 'center';
-      text(ctx, '⛰  Add a photo', pb.x + pb.w / 2, pb.y + pb.h / 2, `500 22px ${SANS}`, '#8b94a3', 'middle');
+      ctx.textAlign = 'center';
+      text(ctx, '⛰  Add a photo', pb.x + pb.w / 2, pb.y + pb.h / 2, `500 22px ${SANS}`, COLORS.softInk, 'middle');
       ctx.textAlign = 'left'; ctx.restore();
     }
     const ty = pb.y + pb.h + 60;
@@ -781,23 +782,30 @@ window.LJTemplates = (function () {
   }
 
   // Fill the selectable paper (drawn UNDER the template design, GoodNotes-style).
+  // Dark-theme equivalents of the selectable papers (Ink & Glass).
+  const DARK_PAPER = {
+    white: '#141a24', cream: '#181c1c', ivory: '#171b20', sand: '#1a1d16',
+    gray: '#161a21', grid: '#141a24', dots: '#141a24', lines: '#141a24'
+  };
   function paperFill(ctx, paperId, tintHex) {
     const P = LJData.PAPERS[paperId] || LJData.PAPERS.white;
-    let base = P.color;
-    if (paperId === 'tint' && tintHex) base = lighten(tintHex, 0.955);
-    ctx.fillStyle = base || '#ffffff';
+    const dark = LJData.COLORS.dark;
+    let base = dark ? DARK_PAPER[paperId] : P.color;
+    if (paperId === 'tint') base = dark ? '#141a24' : (tintHex ? lighten(tintHex, 0.955) : '#ffffff');
+    ctx.fillStyle = base || (dark ? '#141a24' : '#ffffff');
     ctx.fillRect(0, 0, W, H);
+    const patInk = dark ? '#242b37' : '#e6e9ef';
     if (P.pattern === 'grid') {
-      ctx.save(); ctx.strokeStyle = '#e6e9ef'; ctx.lineWidth = 1;
+      ctx.save(); ctx.strokeStyle = patInk; ctx.lineWidth = 1;
       for (let x = 40; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
       for (let y = 40; y < H; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
       ctx.restore();
     } else if (P.pattern === 'dots') {
-      ctx.save(); ctx.fillStyle = '#d3d8e0';
+      ctx.save(); ctx.fillStyle = dark ? '#2c3442' : '#d3d8e0';
       for (let y = 40; y < H; y += 40) for (let x = 40; x < W; x += 40) { ctx.beginPath(); ctx.arc(x, y, 1.4, 0, Math.PI * 2); ctx.fill(); }
       ctx.restore();
     } else if (P.pattern === 'lines') {
-      ctx.save(); ctx.strokeStyle = '#e6e9ef'; ctx.lineWidth = 1;
+      ctx.save(); ctx.strokeStyle = patInk; ctx.lineWidth = 1;
       for (let y = 80; y < H; y += 44) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
       ctx.restore();
     }

@@ -2,14 +2,27 @@
 window.LJData = (function () {
   const PAGE = { W: 1024, H: 1325, M: 72 };
 
-  const COLORS = {
-    ink: '#2a2e38',
-    softInk: '#6b7380',
-    rule: '#ccd0db',
-    faint: '#e0e5ed',
-    accent: '#4a5f50',
-    paper: '#ffffff'
+  // Two render palettes matching the app themes: "Quiet Paper" (light) and
+  // "Ink & Glass" (dark). COLORS is mutated in place by setPalette so the
+  // template code that captured the object keeps working.
+  const PALETTES = {
+    light: {
+      ink: '#26241f', softInk: '#8a8478', rule: '#d8d2c4', faint: '#e7e2d5',
+      accent: '#2f4a3b', red: '#db4a33', paper: '#f7f3ea', dark: false
+    },
+    dark: {
+      ink: '#e8ecf2', softInk: '#8b97a8', rule: '#39404d', faint: '#272d38',
+      accent: '#5a8c6e', red: '#db4a33', paper: '#141a24', dark: true
+    }
   };
+  const COLORS = Object.assign({}, PALETTES.light);
+  let paletteName = 'light';
+  function setPalette(name) {
+    if (!PALETTES[name]) name = 'light';
+    paletteName = name;
+    Object.assign(COLORS, PALETTES[name]);
+  }
+  function currentPalette() { return paletteName; }
 
   // Cover themes: gradient stops, foil (lettering), and an opening verse.
   const COVERS = {
@@ -85,5 +98,5 @@ window.LJData = (function () {
     });
   }
 
-  return { PAGE, COLORS, COVERS, TEMPLATES, INSERTABLE, SWATCH_COLORS, PAPERS, PAPER_ORDER, uid };
+  return { PAGE, COLORS, COVERS, TEMPLATES, INSERTABLE, SWATCH_COLORS, PAPERS, PAPER_ORDER, uid, setPalette, currentPalette };
 })();

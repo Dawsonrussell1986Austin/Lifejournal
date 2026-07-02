@@ -15,14 +15,20 @@
     <header class="lib-header">
       <div class="brand">
         <span class="brand-cross">✝</span>
-        <h1>Life Journal</h1>
+        <h1>Life<em>Journal</em></h1>
+        <span class="brand-digital">Digital</span>
       </div>
       <div class="header-actions">
         <button id="syncBtn" class="btn" title="Sync across devices">☁ Sync</button>
         <button id="newJournalBtn" class="btn primary">+ New Journal</button>
       </div>
     </header>
+    <div class="lib-greet">
+      <h1 id="greeting">Good evening.</h1>
+      <p id="greetSub"></p>
+    </div>
     <div id="shelf" class="shelf"></div>
+    <div class="shelf-foot"><span>Shelf · sorted by last opened</span><span id="shelfDay"></span></div>
     <p class="lib-foot">A Christian journal you write by hand — type or draw on every page.</p>
 
     <nav class="dock">
@@ -35,6 +41,7 @@
       <button class="dock-btn" id="dockSync" title="Sync" aria-label="Sync">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6 9.5 3.5 3.5 0 0 0 7 18z"/></svg>
       </button>
+      <button class="dock-btn" id="dockTheme" title="Theme" aria-label="Theme">◐</button>
     </nav>
   </section>
 
@@ -55,6 +62,7 @@
       <div class="tb-group tools">
         <button id="typeModeBtn" class="tb-btn mode-btn" title="Type into the page's slots">⌨︎ Type</button>
         <button id="paperBtn" class="tb-btn mode-btn" title="Choose paper">▤ Paper</button>
+        <button id="themeBtn" class="tb-btn mode-btn" title="Switch theme">◐</button>
         <span class="divider"></span>
         <div class="pen-tools">
           <button class="tb-btn tool active" data-tool="pen" title="Pen">✎</button>
