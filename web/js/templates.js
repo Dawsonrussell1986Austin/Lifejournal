@@ -561,6 +561,28 @@ window.LJTemplates = (function () {
     lineY.forEach((y, i) => f.push({ id: 'day' + i, x: M + 140, y: y, w: W - 2 * M - 140, size: 24 }));
     return f;
   }
+  function prayerListFields() {
+    const colW = (W - 2 * M) / 2 - 20;
+    const f = [{ id: 'weekof', x: W - M - 202, y: M + 24, w: 202, size: 22 }];
+    for (let i = 0; i < 9; i++) {
+      const y = M + 140 + i * 110 + 16;
+      f.push({ id: 'reqt' + i, x: M + 36, y: y, w: colW - 36, size: 22 });
+      f.push({ id: 'anst' + i, x: M + colW + 76, y: y, w: colW - 36, size: 22 });
+    }
+    return f;
+  }
+  function gratitudeFields() {
+    let f = [{ id: 'date', x: W - M - 192, y: M + 24, w: 192, size: 22 }];
+    f = f.concat(lineFields('g', M + 30, M + 150, W - 2 * M - 30, 5, 64, 28));
+    f = f.concat(lineFields('gs', M, M + 548, W - 2 * M, 4, 48, 26));
+    f.push({ id: 'enc', x: M, y: M + 808, w: W - 2 * M, size: 26 });
+    return f;
+  }
+  function planWeekFields() {
+    const g = LJPlanner.weekRowGeom(), f = [];
+    for (let i = 0; i < 7; i++) f.push({ id: 'd' + i, x: M, y: g.top + i * g.rowH + 58, w: W - 2 * M, size: 24 });
+    return f;
+  }
   function sermonNotesFields() {
     const half = (W - 2 * M) / 2 - 20, colW = (W - 2 * M) / 2 - 16;
     const f = [
@@ -598,7 +620,9 @@ window.LJTemplates = (function () {
       case 'notesTasks': return lineFields('n', M + 32, M + 80, W - 2 * M - 32, 18, 62, 26);
       case 'teachingNotes': return lineFields('t', M, M + 154, W - 2 * M, 23, 46, 26);
       case 'sermonNotes': return sermonNotesFields();
-      case 'gratitude': return lineFields('g', M + 30, M + 150, W - 2 * M - 30, 5, 64, 28);
+      case 'prayerList': return prayerListFields();
+      case 'planWeek': return planWeekFields();
+      case 'gratitude': return gratitudeFields();
       case 'lined': return lineFields('l', M, M + 48, W - 2 * M, 26, 48, 28);
       case 'dotted': return lineFields('l', M, M + 42, W - 2 * M, 28, 42, 26);
       case 'blank': return lineFields('l', M, M + 60, W - 2 * M, 22, 54, 30);

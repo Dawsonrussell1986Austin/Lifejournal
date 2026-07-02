@@ -267,6 +267,7 @@
     const page = { id: LJData.uid(), template };
     state.journal.pages.splice(state.pageIndex + 1, 0, page);
     LJStore.saveLibrary(state.lib);
+    buildPlannerIndex();
     loadPage(state.pageIndex + 1);
   }
 
@@ -277,6 +278,7 @@
     LJStore.deletePage(page.id);
     state.journal.pages.splice(state.pageIndex, 1);
     LJStore.saveLibrary(state.lib);
+    buildPlannerIndex();
     loadPage(Math.min(state.pageIndex, state.journal.pages.length - 1));
   }
 

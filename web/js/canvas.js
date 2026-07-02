@@ -272,6 +272,45 @@ window.JournalCanvas = (function () {
     }
   }
 
+  // Draw typed field entries onto a canvas so thumbnails / PDF export match
+  // what the live field layer shows (text resting just above each line).
+  function drawFields(ctx, template, fields) {
+    if (!fields) return;
+    const SANS = '-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif';
+    const rects = LJTemplates.fieldRects(template) || [];
+    ctx.save();
+    ctx.fillStyle = '#1f2330';
+    ctx.textBaseline = 'alphabetic';
+    for (const f of rects) {
+      const v = fields[f.id];
+      if (!v) continue;
+      const fs = (f.size || 26) * 0.86 - 2;
+      ctx.font = `400 ${fs}px ${SANS}`;
+      ctx.fillText(String(v), f.x + 2, f.y - 5, f.w - 4);
+    }
+    ctx.restore();
+  }
+
+  // Draw ✓ marks in checked boxes for thumbnails / PDF export.
+  function drawChecks(ctx, template, checks) {
+    if (!checks) return;
+    const rects = LJTemplates.checkRects(template) || [];
+    ctx.save();
+    ctx.strokeStyle = '#4a5f50';
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for (const r of rects) {
+      if (!checks[r.id]) continue;
+      const s = r.size;
+      ctx.lineWidth = Math.max(2, s * 0.14);
+      ctx.beginPath();
+      ctx.moveTo(r.x + s * 0.22, r.y + s * 0.55);
+      ctx.lineTo(r.x + s * 0.42, r.y + s * 0.75);
+      ctx.lineTo(r.x + s * 0.8, r.y + s * 0.28);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   // Build the draw options for a page (cover context + planner date fields).
   function templateOpts(page, journal) {
     const cv = LJData.COVERS[journal.cover] || LJData.COVERS.sage;
@@ -298,11 +337,15 @@ window.JournalCanvas = (function () {
     const jc = JournalCanvas.prototype;
     for (const s of data.strokes) jc._drawStroke.call({ _segWidth: jc._segWidth }, ctx, s);
     drawTexts(ctx, data.texts);
+    drawFields(ctx, page.template, data.fields);
+    drawChecks(ctx, page.template, data.checks);
     return out;
   }
 
   JournalCanvas.renderPageCanvas = renderPageCanvas;
   JournalCanvas.drawTexts = drawTexts;
+  JournalCanvas.drawFields = drawFields;
+  JournalCanvas.drawChecks = drawChecks;
   JournalCanvas.templateOpts = templateOpts;
   return JournalCanvas;
 })();
