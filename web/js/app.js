@@ -179,6 +179,52 @@
     updatePageMeta();
   }
 
+  // ---- Auto-flow: when a prose line fills up, overflow wraps to the next ----
+  // Rows where each line is its own item (schedule hours, task lists, habit
+  // rows…) must NOT spill into the next line.
+  const NO_FLOW = new Set(['sch', 'day', 'd', 'hab', 'reqt', 'anst', 'top', 'step', 'pri', 'tsk', 'goal', 'prog']);
+  const fieldMeasurer = document.createElement('canvas').getContext('2d');
+  function fieldGroup(id) { return String(id).replace(/\d+$/, ''); }
+
+  // If fields[idx] overflows its width, move whole words onto the next line
+  // of the same group (cascading down). Returns nothing; moves the caret to
+  // follow the text when the user was typing at the overflow point.
+  function flowField(layer, fields, idx) {
+    const f = fields[idx];
+    const next = fields[idx + 1];
+    if (!next || fieldGroup(next.id) !== fieldGroup(f.id) || NO_FLOW.has(fieldGroup(f.id))) return;
+    const inp = layer.querySelector('.lj-field[data-idx="' + idx + '"]');
+    if (!inp) return;
+    const st = getComputedStyle(inp);
+    fieldMeasurer.font = `${st.fontWeight} ${st.fontSize} ${st.fontFamily}`;
+    const maxW = inp.clientWidth - 6;
+    const val = inp.value;
+    if (fieldMeasurer.measureText(val).width <= maxW) return;
+    // largest fitting prefix, preferring a word boundary
+    let cut = val.length;
+    while (cut > 1 && fieldMeasurer.measureText(val.slice(0, cut)).width > maxW) cut--;
+    let br = val.lastIndexOf(' ', cut);
+    if (br <= 0) br = cut;
+    const keep = val.slice(0, br).replace(/\s+$/, '');
+    const overflow = val.slice(br).replace(/^\s+/, '');
+    if (!overflow) return;
+    const caret = inp.selectionStart;
+    inp.value = keep;
+    state.fields[f.id] = keep;
+    const nextInp = layer.querySelector('.lj-field[data-idx="' + (idx + 1) + '"]');
+    const existing = state.fields[next.id] || '';
+    const merged = overflow + (existing ? ' ' + existing : '');
+    state.fields[next.id] = merged;
+    if (nextInp) nextInp.value = merged;
+    flowField(layer, fields, idx + 1);
+    // follow the caret onto the next line if it sat inside the moved text
+    if (caret > keep.length && nextInp && document.activeElement === inp) {
+      const pos = Math.min(Math.max(0, caret - (br + 1)), nextInp.value.length);
+      nextInp.focus();
+      nextInp.setSelectionRange(pos, pos);
+    }
+  }
+
   // Render the typed fields for the current page. Inputs are editable only in
   // type mode; in draw mode they show their text read-only beneath the ink.
   function renderFieldLayer() {
@@ -206,7 +252,12 @@
       inp.style.lineHeight = (fs * 1.2) + 'px';
       // box bottom rests on the writing line, so the text sits just above it
       inp.style.top = (f.y * s - fs * 1.2) + 'px';
-      inp.addEventListener('input', () => { state.fields[f.id] = inp.value; recordChange('field:' + f.id); saveCurrentDebounced(); });
+      inp.addEventListener('input', () => {
+        state.fields[f.id] = inp.value;
+        flowField(layer, fields, idx);
+        recordChange('field:' + f.id);
+        saveCurrentDebounced();
+      });
       inp.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === 'Tab') {
           e.preventDefault();
