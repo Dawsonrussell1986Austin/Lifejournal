@@ -284,9 +284,16 @@ window.JournalCanvas = (function () {
     for (const f of rects) {
       const v = fields[f.id];
       if (!v) continue;
-      const fs = (f.size || 26) * 0.86 - 2;
+      // Shrink the font until the entry fits its slot — reads better in a PDF
+      // than fillText's horizontal glyph squeeze.
+      let fs = (f.size || 26) * 0.86 - 2;
+      const str = String(v), maxW = f.w - 4;
       ctx.font = `400 ${fs}px ${SANS}`;
-      ctx.fillText(String(v), f.x + 2, f.y - 5, f.w - 4);
+      while (fs > 9 && ctx.measureText(str).width > maxW) {
+        fs -= 1;
+        ctx.font = `400 ${fs}px ${SANS}`;
+      }
+      ctx.fillText(str, f.x + 2, f.y - 5, maxW);
     }
     ctx.restore();
   }

@@ -142,7 +142,7 @@
     $('#todayBtn').style.display = state.journal.kind === 'planner' ? '' : 'none';
     if (!state.canvas) {
       state.canvas = new JournalCanvas($('#bgCanvas'), $('#inkCanvas'), $('#pageWrap'));
-      state.canvas.onChange = () => saveCurrentDebounced();
+      state.canvas.onChange = () => { recordChange(); saveCurrentDebounced(); };
     }
     loadPage(0);
     requestAnimationFrame(relayout);
@@ -168,6 +168,9 @@
     state.checks = data.checks || {};
     state.fields = data.fields || {};
     state.selectedTextId = null;
+    state.undoStack = [];
+    state.lastUndoTag = null;
+    state.prevSnap = snapPage();
     renderFieldLayer();
     renderTextLayer();
     renderLinkLayer();
@@ -203,7 +206,7 @@
       inp.style.lineHeight = (fs * 1.2) + 'px';
       // box bottom rests on the writing line, so the text sits just above it
       inp.style.top = (f.y * s - fs * 1.2) + 'px';
-      inp.addEventListener('input', () => { state.fields[f.id] = inp.value; saveCurrentDebounced(); });
+      inp.addEventListener('input', () => { state.fields[f.id] = inp.value; recordChange('field:' + f.id); saveCurrentDebounced(); });
       inp.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === 'Tab') {
           e.preventDefault();
@@ -251,6 +254,33 @@
 
   function pageData() {
     return { strokes: state.canvas ? state.canvas.strokes : [], texts: state.texts, checks: state.checks, fields: state.fields };
+  }
+
+  // ---------- Unified undo (ink, typing, checks, text boxes) ----------
+  // The stack holds page snapshots taken BEFORE each change. Continuous edits
+  // that share a tag (e.g. typing in one field) collapse into a single step.
+  function snapPage() { return JSON.parse(JSON.stringify(pageData())); }
+  function recordChange(tag) {
+    if (!tag || tag !== state.lastUndoTag) {
+      state.undoStack.push(state.prevSnap);
+      if (state.undoStack.length > 60) state.undoStack.shift();
+    }
+    state.prevSnap = snapPage();
+    state.lastUndoTag = tag || null;
+  }
+  function undoAction() {
+    if (!state.undoStack || !state.undoStack.length) { toast('Nothing to undo'); return; }
+    const s = state.undoStack.pop();
+    state.canvas.setStrokes(s.strokes);
+    state.texts = s.texts;
+    state.checks = s.checks;
+    state.fields = s.fields;
+    state.prevSnap = JSON.parse(JSON.stringify(s));
+    state.lastUndoTag = null;
+    renderFieldLayer();
+    renderTextLayer();
+    renderInteractiveLayer();
+    saveCurrentDebounced();
   }
   function saveCurrentDebounced() {
     const id = currentPage().id;
@@ -474,6 +504,7 @@
       b.onclick = () => {
         if (state.checks[r.id]) { delete state.checks[r.id]; b.classList.remove('checked'); }
         else { state.checks[r.id] = true; b.classList.add('checked'); }
+        recordChange();
         saveCurrentDebounced();
       };
       layer.appendChild(b);
@@ -621,7 +652,7 @@
     box.style.color = t.color || '#1f2330';
     box.textContent = t.text || '';
 
-    box.addEventListener('input', () => { t.text = box.innerText; saveCurrentDebounced(); });
+    box.addEventListener('input', () => { t.text = box.innerText; recordChange('text:' + t.id); saveCurrentDebounced(); });
     box.addEventListener('focus', () => selectText(t.id));
     box.addEventListener('blur', () => {
       t.text = box.innerText;
@@ -655,6 +686,7 @@
       const up = () => {
         document.removeEventListener('pointermove', mv);
         document.removeEventListener('pointerup', up);
+        if (t.x !== ox || t.y !== oy) recordChange();
         saveCurrentDebounced();
       };
       document.addEventListener('pointermove', mv);
@@ -673,6 +705,7 @@
       text: ''
     };
     state.texts.push(t);
+    recordChange();
     renderTextLayer();
     const box = document.querySelector(`#textLayer [data-id="${t.id}"] .lj-textbox`);
     if (box) { selectText(t.id); box.focus(); }
@@ -691,6 +724,7 @@
   function removeText(id) {
     state.texts = state.texts.filter((t) => t.id !== id);
     if (state.selectedTextId === id) state.selectedTextId = null;
+    recordChange();
     renderTextLayer();
     saveCurrentDebounced();
   }
@@ -806,7 +840,7 @@
     $('#addPageBtn').onclick = openTemplatePicker;
     $('#deletePageBtn').onclick = deletePage;
     $('#pickerClose').onclick = closePicker;
-    $('#undoBtn').onclick = () => state.canvas && state.canvas.undo();
+    $('#undoBtn').onclick = undoAction;
 
     document.querySelectorAll('.tb-btn.tool').forEach((b) => {
       b.onclick = () => selectTool(b.dataset.tool);

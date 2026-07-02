@@ -1,19 +1,29 @@
-// PDF export via jsPDF (loaded lazily from CDN). Each journal page is rendered
-// (template + handwriting) to an image and placed on its own PDF page.
+// PDF export via jsPDF (loaded lazily — bundled copy first, CDN as backup).
+// Each journal page is rendered (template + handwriting) to an image and
+// placed on its own PDF page.
 window.LJPDF = (function () {
-  const SRC = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+  const SOURCES = [
+    'vendor/jspdf.umd.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
+  ];
   let loading;
+
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = src;
+      s.onload = resolve;
+      s.onerror = () => { s.remove(); reject(new Error('failed: ' + src)); };
+      document.head.appendChild(s);
+    });
+  }
 
   function ensureLib() {
     if (window.jspdf) return Promise.resolve();
     if (loading) return loading;
-    loading = new Promise((resolve, reject) => {
-      const s = document.createElement('script');
-      s.src = SRC;
-      s.onload = resolve;
-      s.onerror = () => reject(new Error('Could not load PDF library'));
-      document.head.appendChild(s);
-    });
+    loading = loadScript(SOURCES[0])
+      .catch(() => loadScript(SOURCES[1]))
+      .catch(() => { loading = null; throw new Error('Could not load PDF library'); });
     return loading;
   }
 
