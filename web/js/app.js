@@ -174,9 +174,12 @@
     else toast('Today isn’t in this journal’s year');
   }
 
-  function openJournal(id) {
-    state.journal = state.lib.journals.find((x) => x.id === id);
-    if (!state.journal) return;
+  function openJournal(id, skipFlow) {
+    const j = state.lib.journals.find((x) => x.id === id);
+    if (!j) return;
+    // Opening the planner starts the daily flow if it hasn't run today.
+    if (!skipFlow && j.kind === 'planner' && maybeMorningFlow(j, true)) return;
+    state.journal = j;
     buildPlannerIndex();
     state.pageIndex = 0;
     $('#library').classList.add('hidden');
@@ -667,10 +670,11 @@
     return nb ? nb[0] + ' 1' : null;
   }
 
-  function maybeMorningFlow() {
+  function maybeMorningFlow(journalArg, fromJournal) {
     if (window.innerWidth <= 640 || !window.LJPlanner) return false;
-    const planner = state.lib.journals.find((j) => j.kind === 'planner');
-    if (!planner) return false;
+    const planner = journalArg || state.lib.journals.find((j) => j.kind === 'planner');
+    if (!planner || planner.kind !== 'planner') return false;
+    flow.fromJournal = !!fromJournal;
     const iso = LJPlanner.todayISO();
     const tp = planner.pages.find((p) => p.date === iso);
     if (!tp) return false;
@@ -766,7 +770,7 @@
     LJStore.savePageData(flow.tp.id, data);
     LJKV.set('lifejournal.flow.' + flow.iso, '1');
     $('#morningFlow').classList.add('hidden');
-    openJournal(flow.planner.id);
+    openJournal(flow.planner.id, true);
     goToDate(flow.iso);
     scheduleAutoSync();
     toast('Today is set — have a great one ✦');
@@ -1744,7 +1748,9 @@
     $('#mfSkip').onclick = () => {
       if (window.LJPlanner) LJKV.set('lifejournal.flow.' + LJPlanner.todayISO(), '1');
       $('#morningFlow').classList.add('hidden');
-      $('#library').classList.remove('hidden');
+      // If the flow was entered by tapping the journal, continue into it.
+      if (flow.fromJournal && flow.planner) openJournal(flow.planner.id, true);
+      else $('#library').classList.remove('hidden');
     };
     $('#paywallRestore').onclick = async () => {
       $('#paywallStatus').textContent = 'Restoring…';
