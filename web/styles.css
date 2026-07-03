@@ -549,12 +549,22 @@ body[data-theme="ink"] .lj-study:hover { background: var(--accent); color: #fff;
 .sd-notes:focus { border-color: var(--accent); }
 #studiesSearch { margin-bottom: 12px; }
 
-/* Study modal body */
-.study-body { font-size: 15px; line-height: 1.65; color: var(--ink); }
-.study-body h3 { font-family: var(--serif); font-size: 17px; margin: 18px 0 6px; color: var(--accent); }
+/* The Bible Studies journal reads as a full page, not a popup. */
+#studiesModal { align-items: stretch; padding: 20px; }
+#studiesModal .modal-card { width: 880px; max-height: none; height: 100%; margin: 0 auto; }
+.study-body { font-size: 16px; line-height: 1.75; color: var(--ink); }
+.study-body h3 { font-family: var(--serif); font-size: 19px; margin: 22px 0 8px; color: var(--accent); }
 .study-body h3:first-child { margin-top: 0; }
-.study-body p { margin: 0 0 10px; }
+.study-body p { margin: 0 0 12px; font-family: var(--serif); }
 .study-loading { color: var(--soft-ink); font-style: italic; }
+@media (max-width: 640px) {
+  #studiesModal { padding: 0; }
+  #studiesModal .modal-card {
+    width: 100%; height: 100%; border-radius: 0;
+    padding-top: calc(18px + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  }
+}
 
 /* Phone bottom tabs */
 .mobile-tabs {

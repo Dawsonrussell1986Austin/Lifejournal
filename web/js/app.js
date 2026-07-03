@@ -188,6 +188,7 @@
       state.canvas.onChange = () => { recordChange(); saveCurrentDebounced(); };
     }
     loadPage(0);
+    setMode(defaultMode(), true);
     requestAnimationFrame(relayout);
   }
 
@@ -383,8 +384,20 @@
     });
   }
 
-  function setMode(mode) {
+  // Device default: iPads (big touch screens) start in Pen mode, desktops and
+  // phones start in Type mode — but whatever you last chose always wins.
+  function defaultMode() {
+    const saved = LJKV.get('lifejournal.mode');
+    if (saved === 'draw' || saved === 'type') return saved;
+    const touch = (navigator.maxTouchPoints || 0) > 0 &&
+      window.matchMedia && matchMedia('(pointer: coarse)').matches;
+    const bigTouch = touch && Math.min(screen.width, screen.height) >= 700;
+    return bigTouch ? 'draw' : 'type';
+  }
+
+  function setMode(mode, quiet) {
     state.mode = mode;
+    LJKV.set('lifejournal.mode', mode);
     const layer = $('#typeLayer');
     const isType = mode === 'type';
     layer.classList.toggle('typing', isType);
@@ -393,10 +406,12 @@
     if (isType) {
       $('#inkCanvas').style.pointerEvents = 'none';
       $('#textLayer').classList.remove('active');
-      const first = layer.querySelector('.lj-field');
-      if (first) first.focus();
-      const n = (LJTemplates.fieldRects(currentPage().template) || []).length;
-      toast(n ? 'Type mode — tap a line, Enter/Tab for the next' : 'No typed fields on this page');
+      if (!quiet) {
+        const first = layer.querySelector('.lj-field');
+        if (first) first.focus();
+        const n = (LJTemplates.fieldRects(currentPage().template) || []).length;
+        toast(n ? 'Type mode — tap a line, Enter/Tab for the next' : 'No typed fields on this page');
+      }
     } else {
       $('#inkCanvas').style.pointerEvents = (state.tool === 'text') ? 'none' : 'auto';
     }
@@ -720,10 +735,15 @@
     if (!parsed) { toast('Pick a passage first — e.g. John 3 or John 3:16'); return; }
     const existing = loadStudies().find((s) => s.ref === parsed.ref);
     if (existing && !force) { openStudies(existing.id); return; }
-    const modal = $('#studyModal'), body = $('#studyBody');
-    $('#studyTitle').textContent = 'Bible Study · ' + parsed.ref;
-    modal.classList.remove('hidden');
-    body.innerHTML = '<p class="study-loading">Preparing a study on <b>' + escapeHtml(parsed.ref) + '</b> — cultural context, application, and the Gospel thread…</p>';
+    // Go straight into the Bible Studies journal; the study forms in place.
+    $('#studiesModal').classList.remove('hidden');
+    $('#studiesList').classList.add('hidden');
+    const d = $('#studyDetail');
+    d.classList.remove('hidden');
+    d.innerHTML =
+      '<h2 class="sd-ref">' + escapeHtml(parsed.ref) + '</h2>' +
+      '<div class="sd-date">Writing your study…</div>' +
+      '<p class="study-loading">Cultural &amp; historical context, how it points to the Gospel, and how to live it out — just a few seconds.</p>';
     try {
       const r = await fetch('/api/study', {
         method: 'POST',
@@ -733,11 +753,13 @@
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || 'Something went wrong.');
       const entry = upsertStudy(parsed.ref, j.study);
-      modal.classList.add('hidden');
-      openStudies(entry.id);
+      renderStudyDetail(entry.id);
       toast('Saved to your Bible Studies');
     } catch (e) {
-      body.innerHTML = '<p class="sync-note">' + escapeHtml(e.message) + '</p>';
+      const retry = el('button', 'btn primary', 'Try again');
+      retry.onclick = () => openStudy(parsed.ref, force);
+      d.innerHTML = '<h2 class="sd-ref">' + escapeHtml(parsed.ref) + '</h2><p class="sync-note">' + escapeHtml(e.message) + '</p>';
+      d.appendChild(retry);
     }
   }
 
@@ -1435,8 +1457,6 @@
     $('#studiesClose').onclick = () => $('#studiesModal').classList.add('hidden');
     $('#studiesSearch').addEventListener('input', () => renderStudiesList($('#studiesSearch').value));
     $('#searchClose').onclick = () => $('#searchModal').classList.add('hidden');
-    $('#studyClose').onclick = () => $('#studyModal').classList.add('hidden');
-    $('#studyRegen').onclick = () => openStudy(state.fields.scr0 || $('#studyTitle').textContent.replace('Bible Study · ', ''), true);
     $('#searchInput').addEventListener('input', () => runSearch($('#searchInput').value));
     $('#moreBtn').onclick = () => {
       const open = !$('#moreMenu').classList.contains('hidden');
