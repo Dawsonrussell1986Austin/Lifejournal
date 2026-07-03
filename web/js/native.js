@@ -40,4 +40,13 @@
     signin: () => auth.call('signin'),
     signout: () => auth.call('signout')
   };
+
+  const notify = makeBridge('ljnotify');
+  window.LJNotify = {
+    available: notify.available,
+    _resolve: notify._resolve,
+    status: () => notify.call('status'),
+    schedule: (hour, minute) => notify.call('schedule', { hour, minute }),
+    cancel: () => notify.call('cancel')
+  };
 })();

@@ -659,9 +659,11 @@
   }
 
   // ---------- Guided morning flow (iPad / desktop) ----------
-  // Opens once per day before the library: thankful → top 3 → scripture
-  // continuation, then lands on today's page with everything filled in.
-  const flow = { step: 0, steps: [], thank: '', tops: ['', '', ''], scr: null };
+  // The daily ritual, one question at a time: yesterday check-in → thankful
+  // → scripture (with a continue-reading nudge) → journal & prayer (AI
+  // prompts) → time-blocking → Five Foundations check-in → reminder. Ends on
+  // today's page with everything written in.
+  const flow = { step: 0, steps: [], data: null };
 
   function nextChapterAfter(pr) {
     if (!window.LJBible || !pr) return null;
@@ -672,36 +674,53 @@
     return nb ? nb[0] + ' 1' : null;
   }
 
+  // Context pulled from the planner for the check-in steps.
+  function flowContext(planner, iso) {
+    const p = LJPlanner.parseISO(iso);
+    const todayTs = Date.UTC(p.y, p.m, p.d);
+    const yIso = LJPlanner.isoFromTs(todayTs - LJPlanner.DAY_MS);
+    const yp = planner.pages.find((pg) => pg.date === yIso);
+    let yFields = {}, yChecks = {}, ypage = null;
+    if (yp) { const d = LJStore.loadPageData(yp.id); yFields = d.fields || {}; yChecks = d.checks || {}; ypage = yp; }
+    const yRef = window.LJBible ? LJBible.parseRef(yFields.scr0 || '') : null;
+
+    // Current quarter goals + this week's commitments (Five Foundations)
+    const q = p.m ? Math.floor(p.m / 3) : Math.floor(new Date().getMonth() / 3);
+    const gp = planner.pages.find((pg) => pg.template === 'foundationsGoals' && pg.quarter === q);
+    const goals = gp ? (LJStore.loadPageData(gp.id).fields || {}) : {};
+    const wd = new Date(todayTs).getUTCDay();
+    const weekStart = LJPlanner.isoFromTs(todayTs - wd * LJPlanner.DAY_MS);
+    const wp = planner.pages.find((pg) => pg.template === 'weeklyFoundations' && pg.weekStart === weekStart);
+    const weekly = wp ? (LJStore.loadPageData(wp.id).fields || {}) : {};
+
+    return { yIso, ypage, yFields, yChecks, yRef, suggestion: yRef ? nextChapterAfter(yRef) : null, goals, weekly };
+  }
+
   function maybeMorningFlow(journalArg, fromJournal) {
     if (window.innerWidth <= 640 || !window.LJPlanner) return false;
     const planner = journalArg || state.lib.journals.find((j) => j.kind === 'planner');
     if (!planner || planner.kind !== 'planner') return false;
-    flow.fromJournal = !!fromJournal;
     const iso = LJPlanner.todayISO();
     const tp = planner.pages.find((p) => p.date === iso);
     if (!tp) return false;
-    // A finished morning leaves th0 filled — never re-ask then. A skip only
-    // silences the rest of this session (launch also respects the daily flag).
     if (flow.skippedSession) return false;
     if (!fromJournal && LJKV.get('lifejournal.flow.' + iso)) return false;
     const data = LJStore.loadPageData(tp.id);
     if ((data.fields || {}).th0) return false;
 
-    // Scripture continuation from yesterday's reading
-    const p = LJPlanner.parseISO(iso);
-    const yIso = LJPlanner.isoFromTs(Date.UTC(p.y, p.m, p.d) - LJPlanner.DAY_MS);
-    const yp = planner.pages.find((pg) => pg.date === yIso);
-    let yRef = null, suggestion = null;
-    if (yp) {
-      const yf = LJStore.loadPageData(yp.id).fields || {};
-      yRef = window.LJBible ? LJBible.parseRef(yf.scr0 || '') : null;
-      if (yRef) suggestion = nextChapterAfter(yRef);
-    }
-
-    flow.planner = planner; flow.tp = tp; flow.iso = iso;
-    flow.yRef = yRef; flow.suggestion = suggestion;
-    flow.thank = ''; flow.tops = ['', '', '']; flow.scr = null;
-    flow.steps = suggestion ? ['thank', 'tops', 'scripture'] : ['thank', 'tops'];
+    const ctx = flowContext(planner, iso);
+    flow.planner = planner; flow.tp = tp; flow.iso = iso; flow.ctx = ctx;
+    flow.fromJournal = !!fromJournal;
+    flow.data = {
+      reviewChecks: Object.assign({}, ctx.yChecks),
+      reviewNote: '', thank: '', tops: ['', '', ''], scr: '', journal: '', prayer: '',
+      sch: {}, steps: ['', '', '', '', ''], remindTime: '07:00'
+    };
+    const hasYesterday = !!(ctx.ypage && (ctx.yFields.top0 || ctx.yFields.top1 || ctx.yFields.top2));
+    flow.steps = [];
+    if (hasYesterday) flow.steps.push('review');
+    flow.steps.push('thank', 'tops', 'scripture', 'journal', 'schedule', 'foundations');
+    if (window.LJNotify && LJNotify.available() && !LJKV.get('lifejournal.reminder')) flow.steps.push('reminder');
     flow.step = 0;
     const day = new Date().toLocaleDateString(undefined, { weekday: 'long' });
     $('#mfGreeting').textContent = `Happy ${day}.`;
@@ -711,54 +730,192 @@
     return true;
   }
 
+  function mfLabel(text) { return el('div', 'mf-label', text); }
+  function mfInputRow(getset, placeholder, cls) {
+    const inp = el('input', 'mf-input' + (cls ? ' ' + cls : ''));
+    inp.type = 'text';
+    inp.placeholder = placeholder || '';
+    inp.value = getset() || '';
+    inp.addEventListener('input', () => getset(inp.value));
+    return inp;
+  }
+
   function renderFlowStep() {
     const body = $('#mfBody');
     body.innerHTML = '';
     const kind = flow.steps[flow.step];
+    const d = flow.data, ctx = flow.ctx;
     $('#mfDots').innerHTML = flow.steps.map((s, i) =>
       `<span class="${i === flow.step ? 'on' : ''}"></span>`).join('');
-    $('#mfNext').classList.toggle('hidden', kind === 'scripture');
+    $('#mfNext').classList.remove('hidden');
+    $('#mfNext').textContent = flow.step === flow.steps.length - 1 ? 'Open my journal →' : 'Continue →';
 
-    if (kind === 'thank') {
-      // The question IS the placeholder, like the reference homepage.
-      const inp = el('input', 'mf-input mf-hero');
-      inp.type = 'text';
-      inp.placeholder = 'Let’s start with what you’re thankful for today…';
-      inp.value = flow.thank;
-      inp.addEventListener('input', () => { flow.thank = inp.value; });
+    if (kind === 'review') {
+      body.appendChild(mfLabel('Quick check-in — how did yesterday go?'));
+      ['top0', 'top1', 'top2'].forEach((id) => {
+        const txt = ctx.yFields[id];
+        if (!txt) return;
+        const row = el('div', 'mf-review-row');
+        const chk = el('button', 'm-check' + (d.reviewChecks[id] ? ' on' : ''));
+        chk.onclick = () => {
+          if (d.reviewChecks[id]) delete d.reviewChecks[id]; else d.reviewChecks[id] = true;
+          chk.classList.toggle('on', !!d.reviewChecks[id]);
+          span.classList.toggle('m-done', !!d.reviewChecks[id]);
+        };
+        const span = el('span', 'mf-review-txt' + (d.reviewChecks[id] ? ' m-done' : ''), escapeHtml(txt));
+        row.appendChild(chk); row.appendChild(span);
+        body.appendChild(row);
+      });
+      const note = mfInputRow((v) => (v === undefined ? d.reviewNote : (d.reviewNote = v)), 'One line — how did it go?');
+      note.classList.add('mf-serifin');
+      body.appendChild(note);
+    } else if (kind === 'thank') {
+      const inp = mfInputRow((v) => (v === undefined ? d.thank : (d.thank = v)),
+        'Let’s start with what you’re thankful for today…', 'mf-hero');
       inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') flowNext(); });
       body.appendChild(inp);
       setTimeout(() => inp.focus(), 60);
     } else if (kind === 'tops') {
-      body.appendChild(el('div', 'mf-label', 'What are 3 things you must get done today?'));
-      flow.tops.forEach((v, i) => {
+      body.appendChild(mfLabel('What 3 things must get done today?'));
+      const inputs = [];
+      for (let i = 0; i < 3; i++) {
         const row = el('div', 'mf-top-row');
-        row.appendChild(el('span', 'mf-num', String(i + 1) + '.'));
-        const inp = el('input', 'mf-input');
-        inp.type = 'text';
-        inp.value = v;
-        inp.addEventListener('input', () => { flow.tops[i] = inp.value; });
+        row.appendChild(el('span', 'mf-num', String(i + 1)));
+        const inp = mfInputRow((v) => (v === undefined ? d.tops[i] : (d.tops[i] = v)));
         inp.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-            const next = body.querySelectorAll('.mf-input')[i + 1];
-            if (next) next.focus(); else flowNext();
-          }
+          if (e.key === 'Enter') { if (i < 2) inputs[i + 1].focus(); else flowNext(); }
         });
+        inputs.push(inp);
         row.appendChild(inp);
         body.appendChild(row);
-      });
-      setTimeout(() => { const f = body.querySelector('.mf-input'); if (f) f.focus(); }, 60);
+      }
+      setTimeout(() => inputs[0].focus(), 60);
     } else if (kind === 'scripture') {
-      body.appendChild(el('div', 'mf-label', `You studied ${escapeHtml(flow.yRef.ref)} yesterday.`));
-      body.appendChild(el('p', 'mf-sub', `Ready to continue with ${escapeHtml(flow.suggestion)}?`));
-      const yes = el('button', 'btn primary mf-big', `Yes — read ${escapeHtml(flow.suggestion)}`);
-      yes.onclick = () => { flow.scr = flow.suggestion; finishFlow(); };
-      const no = el('button', 'btn mf-big', 'I’ll pick my own passage');
-      no.onclick = () => { flow.scr = null; finishFlow(); };
+      body.appendChild(mfLabel('What scripture would you like to study?'));
+      if (ctx.suggestion) {
+        body.appendChild(el('p', 'mf-sub',
+          `You studied ${escapeHtml(ctx.yRef.ref)} yesterday — today you’d be at ${escapeHtml(ctx.suggestion)}.`));
+        const use = el('button', 'mf-chip mf-suggest-chip', `Use ${escapeHtml(ctx.suggestion)} →`);
+        use.onclick = () => { d.scr = ctx.suggestion; inp.value = ctx.suggestion; dd.classList.add('hidden'); };
+        body.appendChild(use);
+      }
+      const inp = mfInputRow((v) => (v === undefined ? d.scr : (d.scr = v)), 'Or pick any passage…');
+      body.appendChild(inp);
+      const dd = el('div', 'm-suggest hidden');
+      const updateDD = () => {
+        const items = window.LJBible ? LJBible.suggest(inp.value) : [];
+        dd.innerHTML = '';
+        if (!items.length || (items.length === 1 && items[0].value === inp.value)) { dd.classList.add('hidden'); return; }
+        items.slice(0, 120).forEach((it) => {
+          const opt = el('div', 'm-suggest-item', it.label);
+          opt.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            inp.value = it.value; d.scr = it.value;
+            if (it.done) { dd.classList.add('hidden'); inp.blur(); } else updateDD();
+          });
+          dd.appendChild(opt);
+        });
+        dd.classList.remove('hidden');
+      };
+      inp.addEventListener('focus', updateDD);
+      inp.addEventListener('input', updateDD);
+      inp.addEventListener('blur', () => setTimeout(() => dd.classList.add('hidden'), 200));
+      body.appendChild(dd);
+    } else if (kind === 'journal') {
+      body.appendChild(mfLabel('Journal'));
+      const jp = el('p', 'mf-sub mf-prompt-j', 'What is on your heart this morning?');
+      body.appendChild(jp);
+      const jta = el('textarea', 'mf-textarea');
+      jta.rows = 4; jta.placeholder = 'Write freely…'; jta.value = d.journal;
+      jta.addEventListener('input', () => { d.journal = jta.value; });
+      body.appendChild(jta);
+      body.appendChild(mfLabel('Prayer'));
+      const pp = el('p', 'mf-sub mf-prompt-p', 'Lord, today I want to bring you…');
+      body.appendChild(pp);
+      const pta = el('textarea', 'mf-textarea');
+      pta.rows = 2; pta.placeholder = 'Talk to God…'; pta.value = d.prayer;
+      pta.addEventListener('input', () => { d.prayer = pta.value; });
+      body.appendChild(pta);
+      loadFlowPrompts(jp, pp);
+    } else if (kind === 'schedule') {
+      body.appendChild(mfLabel('Let’s time block your day'));
+      const grid = el('div', 'mf-sched');
+      const hours = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22];
+      const evts = (calOn() && calCache[flow.iso]) || [];
+      hours.forEach((h, i) => {
+        const row = el('div', 'mf-sched-row');
+        row.appendChild(el('span', 'm-hour', mobHourLabel(h)));
+        const inp = el('input', 'mf-input mf-sched-in');
+        inp.type = 'text';
+        const evt = evts.find((e) => !e.allDay && Math.floor(e.startH) === h);
+        if (d.sch['sch' + i] === undefined && evt) d.sch['sch' + i] = evt.title;
+        inp.value = d.sch['sch' + i] || '';
+        if (evt) inp.placeholder = evt.title;
+        inp.addEventListener('input', () => { d.sch['sch' + i] = inp.value; });
+        row.appendChild(inp);
+        grid.appendChild(row);
+      });
+      body.appendChild(grid);
+      if (calOn() && flow.iso && !calCache[flow.iso]) {
+        LJCal.events(flow.iso).then((r) => {
+          if (r && r.events) { calCache[flow.iso] = r.events; if (flow.steps[flow.step] === 'schedule') renderFlowStep(); }
+        });
+      }
+    } else if (kind === 'foundations') {
+      body.appendChild(mfLabel('Five Foundations — what will you do today?'));
+      SIDE_FND.forEach((name, i) => {
+        const sec = el('div', 'mf-fnd');
+        sec.appendChild(el('div', 'mf-fnd-name', name));
+        const goal = flow.ctx.goals['g' + i + 'goal'];
+        const week = flow.ctx.weekly['goal' + i];
+        if (goal) sec.appendChild(el('div', 'mf-fnd-goal', '12-week goal: ' + escapeHtml(goal)));
+        if (week) sec.appendChild(el('div', 'mf-fnd-goal', 'This week: ' + escapeHtml(week)));
+        const inp = mfInputRow((v) => (v === undefined ? d.steps[i] : (d.steps[i] = v)), 'Today I will…');
+        sec.appendChild(inp);
+        body.appendChild(sec);
+      });
+    } else if (kind === 'reminder') {
+      body.appendChild(mfLabel('A gentle morning nudge?'));
+      body.appendChild(el('p', 'mf-sub', 'Get a reminder each morning to check in on yesterday and set up today.'));
+      const t = el('input', 'mf-time');
+      t.type = 'time'; t.value = d.remindTime;
+      t.addEventListener('input', () => { d.remindTime = t.value; });
+      body.appendChild(t);
+      const set = el('button', 'btn primary mf-big', 'Set reminder');
+      set.onclick = async () => {
+        const [h, m] = d.remindTime.split(':').map(Number);
+        const r = await LJNotify.schedule(h || 7, m || 0);
+        if (r && r.scheduled) { LJKV.set('lifejournal.reminder', d.remindTime); toast('Reminder set for ' + d.remindTime); }
+        else if (r && r.granted === false) toast('Notifications are off — enable them in Settings');
+        finishFlow();
+      };
+      const skip = el('button', 'btn mf-big', 'Not now');
+      skip.onclick = finishFlow;
       const wrap = el('div', 'mf-choices');
-      wrap.appendChild(yes); wrap.appendChild(no);
+      wrap.appendChild(set); wrap.appendChild(skip);
       body.appendChild(wrap);
+      $('#mfNext').classList.add('hidden');
     }
+  }
+
+  async function loadFlowPrompts(jpEl, ppEl) {
+    const iso = flow.iso;
+    const cacheKey = 'lifejournal.prompts.' + iso;
+    const cached = LJKV.get(cacheKey);
+    if (cached) {
+      try { const c = JSON.parse(cached); if (c.journal) jpEl.textContent = c.journal; if (c.prayer) ppEl.textContent = c.prayer; return; } catch (e) {}
+    }
+    try {
+      const r = await fetch('/api/prompt', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ thankful: flow.data.thank, scripture: flow.data.scr })
+      });
+      if (!r.ok) return;
+      const j = await r.json();
+      if (j.journal) jpEl.textContent = j.journal;
+      if (j.prayer) ppEl.textContent = j.prayer;
+      LJKV.set(cacheKey, JSON.stringify(j));
+    } catch (e) { /* static prompts stay */ }
   }
 
   function flowNext() {
@@ -767,11 +924,33 @@
   }
 
   function finishFlow() {
+    const d = flow.data;
+    // Yesterday's review: check off what got done + a reflection line.
+    if (flow.ctx.ypage) {
+      const y = LJStore.loadPageData(flow.ctx.ypage.id);
+      y.checks = d.reviewChecks;
+      if (d.reviewNote.trim()) {
+        y.fields = y.fields || {};
+        for (let i = 0; i < 12; i++) {
+          if (!y.fields['jrn' + i]) { y.fields['jrn' + i] = 'Looking back: ' + d.reviewNote.trim(); break; }
+        }
+      }
+      LJStore.savePageData(flow.ctx.ypage.id, y);
+    }
+    // Today's page.
     const data = LJStore.loadPageData(flow.tp.id);
     data.fields = data.fields || {};
-    if (flow.thank.trim()) data.fields.th0 = flow.thank.trim();
-    flow.tops.forEach((t, i) => { if (t.trim()) data.fields['top' + i] = t.trim(); });
-    if (flow.scr) data.fields.scr0 = flow.scr;
+    if (d.thank.trim()) data.fields.th0 = d.thank.trim();
+    d.tops.forEach((t, i) => { if (t.trim()) data.fields['top' + i] = t.trim(); });
+    if (d.scr.trim()) data.fields.scr0 = d.scr.trim();
+    Object.keys(d.sch).forEach((k) => { if ((d.sch[k] || '').trim()) data.fields[k] = d.sch[k].trim(); });
+    d.steps.forEach((s, i) => { if (s.trim()) data.fields['step' + i] = s.trim(); });
+    const lines = [];
+    d.journal.split('\n').forEach((l) => { if (l.trim()) lines.push(l.trim()); });
+    if (d.prayer.trim()) {
+      d.prayer.split('\n').forEach((l, i) => { if (l.trim()) lines.push((i === 0 ? 'Prayer — ' : '') + l.trim()); });
+    }
+    lines.slice(0, 12).forEach((l, i) => { data.fields['jrn' + i] = l; });
     LJStore.savePageData(flow.tp.id, data);
     LJKV.set('lifejournal.flow.' + flow.iso, '1');
     $('#morningFlow').classList.add('hidden');

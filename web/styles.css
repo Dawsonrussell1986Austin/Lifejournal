@@ -593,6 +593,34 @@ body[data-theme="ink"] .mf-card { box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5); }
 }
 .mf-chip:hover { color: var(--ink); background: var(--hover); }
 
+/* Extra steps of the guided ritual (review / journal / schedule / foundations) */
+#mfBody { max-height: min(58vh, 620px); overflow-y: auto; }
+.mf-review-row { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--faint); }
+.mf-review-txt { font-family: var(--serif); font-size: 17px; color: var(--ink); }
+.mf-serifin { border-bottom: 1px solid var(--faint); margin-top: 14px; font-style: italic; font-size: 16px; }
+.mf-suggest-chip { display: inline-block; margin-bottom: 16px; border-color: var(--accent); color: var(--accent); }
+.mf-suggest-chip:hover { background: var(--accent); color: #fff; }
+.mf-textarea {
+  width: 100%; resize: vertical; border: 1px solid var(--card-line); border-radius: 14px;
+  background: transparent; outline: none; padding: 12px 14px; margin-bottom: 18px;
+  font-family: var(--serif); font-size: 16.5px; line-height: 1.55; color: var(--ink);
+}
+.mf-textarea:focus { border-color: var(--accent); }
+.mf-textarea::placeholder { color: var(--soft-ink); opacity: .8; }
+.mf-sched { display: grid; grid-template-columns: 1fr 1fr; column-gap: 26px; }
+.mf-sched-row { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--faint); }
+.mf-sched-in { font-size: 15px; padding: 7px 0; }
+.mf-fnd { padding: 10px 0 6px; border-bottom: 1px solid var(--faint); }
+.mf-fnd:last-child { border-bottom: none; }
+.mf-fnd-name { font-size: 12px; font-weight: 800; letter-spacing: 1.5px; color: var(--accent); }
+.mf-fnd-goal { font-size: 13px; color: var(--soft-ink); margin-top: 3px; }
+.mf-fnd .mf-input { font-size: 16px; padding: 6px 0 8px; }
+.mf-time {
+  font-size: 22px; font-family: var(--serif); color: var(--ink);
+  border: 1px solid var(--card-line); border-radius: 14px; background: transparent;
+  padding: 10px 16px; outline: none; margin-bottom: 18px;
+}
+
 /* Apple Calendar events on the schedule */
 .lj-cal-evt {
   position: absolute; pointer-events: none; z-index: 2;

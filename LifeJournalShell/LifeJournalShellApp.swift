@@ -65,6 +65,7 @@ final class WebModel: NSObject, ObservableObject, WKNavigationDelegate {
     private let iapBridge = IAPBridge()
     private let calBridge = CalendarBridge()
     private let authBridge = AuthBridge()
+    private let notifyBridge = NotifyBridge()
 
     override init() {
         let config = WKWebViewConfiguration()
@@ -73,6 +74,7 @@ final class WebModel: NSObject, ObservableObject, WKNavigationDelegate {
         config.userContentController.add(iapBridge, name: "ljiap")
         config.userContentController.add(calBridge, name: "ljcal")
         config.userContentController.add(authBridge, name: "ljauth")
+        config.userContentController.add(notifyBridge, name: "ljnotify")
 
         let wv = WKWebView(frame: .zero, configuration: config)
         wv.scrollView.contentInsetAdjustmentBehavior = .never
@@ -88,6 +90,7 @@ final class WebModel: NSObject, ObservableObject, WKNavigationDelegate {
         iapBridge.webView = wv
         calBridge.webView = wv
         authBridge.webView = wv
+        notifyBridge.webView = wv
         wv.navigationDelegate = self
         load()
     }
