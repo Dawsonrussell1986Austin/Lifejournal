@@ -63,12 +63,16 @@ final class WebModel: NSObject, ObservableObject, WKNavigationDelegate {
     @Published var failed = false
     let webView: WKWebView
     private let iapBridge = IAPBridge()
+    private let calBridge = CalendarBridge()
+    private let authBridge = AuthBridge()
 
     override init() {
         let config = WKWebViewConfiguration()
         config.allowsInlineMediaPlayback = true
         config.websiteDataStore = .default()   // persistent IndexedDB / localStorage
         config.userContentController.add(iapBridge, name: "ljiap")
+        config.userContentController.add(calBridge, name: "ljcal")
+        config.userContentController.add(authBridge, name: "ljauth")
 
         let wv = WKWebView(frame: .zero, configuration: config)
         wv.scrollView.contentInsetAdjustmentBehavior = .never
@@ -82,6 +86,8 @@ final class WebModel: NSObject, ObservableObject, WKNavigationDelegate {
         self.webView = wv
         super.init()
         iapBridge.webView = wv
+        calBridge.webView = wv
+        authBridge.webView = wv
         wv.navigationDelegate = self
         load()
     }

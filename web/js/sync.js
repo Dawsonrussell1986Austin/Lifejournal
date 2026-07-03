@@ -8,7 +8,9 @@ window.LJSync = (function () {
   const MAX_BYTES = 4_300_000;
 
   function isSyncableKey(k) {
-    return k && (k.indexOf('lifejournal.page.') === 0 || k.indexOf('lifejournal.photo.') === 0);
+    return k && (k.indexOf('lifejournal.page.') === 0 ||
+                 k.indexOf('lifejournal.photo.') === 0 ||
+                 k === 'lifejournal.studies');
   }
 
   function getCode() { return LJKV.get(CODE_KEY) || ''; }
@@ -60,5 +62,13 @@ window.LJSync = (function () {
     return { empty: false, savedAt: p.savedAt };
   }
 
-  return { getCode, setCode, getLastSync, upload, download };
+  // Fetch the cloud payload without applying it (for launch-time comparison).
+  async function fetchRaw(code) {
+    const r = await fetch(API + '?code=' + encodeURIComponent(code));
+    if (r.status === 204) return null;
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return await r.json();
+  }
+
+  return { getCode, setCode, getLastSync, upload, download, fetchRaw, applyPayload, setLastSync };
 })();

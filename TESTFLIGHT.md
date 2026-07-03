@@ -77,3 +77,15 @@ bridge reports "not configured"), so beta testing is unaffected.
   version for App Store review later.
 - First launch needs internet; after that WKWebView caches the app shell, and all
   journal data is stored on-device (IndexedDB) with optional cloud sync via ☁ Sync.
+
+## Sign in with Apple + iCal (added later)
+
+The shell now includes Sign in with Apple (drives automatic cross-device
+sync) and read-only Apple Calendar access (events on daily pages). Two
+things to know when archiving:
+
+- Xcode may prompt to register the **Sign In with Apple** capability on the
+  App ID — with automatic signing just accept; otherwise tick the capability
+  on the App ID at developer.apple.com → Identifiers.
+- Calendar permission strings are already in the build settings; iOS asks
+  the user the first time they tap ⋯ → 📅 iCal.

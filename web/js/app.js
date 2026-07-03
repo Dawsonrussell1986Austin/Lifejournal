@@ -467,6 +467,7 @@
     const id = currentPage().id;
     clearTimeout(state.saveTimer);
     state.saveTimer = setTimeout(() => LJStore.savePageData(id, pageData()), 500);
+    scheduleAutoSync();
   }
   function flushSave() {
     if (!state.canvas || !state.journal) return;
@@ -650,6 +651,188 @@
     if (layer) layer.classList.toggle('active', isText);
     $('#inkCanvas').style.pointerEvents = isText ? 'none' : 'auto';
     if (isText) toast('Text tool — tap the page to type'); else deselectText();
+  }
+
+  // ---------- Guided morning flow (iPad / desktop) ----------
+  // Opens once per day before the library: thankful → top 3 → scripture
+  // continuation, then lands on today's page with everything filled in.
+  const flow = { step: 0, steps: [], thank: '', tops: ['', '', ''], scr: null };
+
+  function nextChapterAfter(pr) {
+    if (!window.LJBible || !pr) return null;
+    const bi = LJBible.BOOKS.findIndex((b) => b[0] === pr.book);
+    if (bi < 0) return null;
+    if (pr.chapter < LJBible.BOOKS[bi][1].length) return pr.book + ' ' + (pr.chapter + 1);
+    const nb = LJBible.BOOKS[bi + 1];
+    return nb ? nb[0] + ' 1' : null;
+  }
+
+  function maybeMorningFlow() {
+    if (window.innerWidth <= 640 || !window.LJPlanner) return false;
+    const planner = state.lib.journals.find((j) => j.kind === 'planner');
+    if (!planner) return false;
+    const iso = LJPlanner.todayISO();
+    const tp = planner.pages.find((p) => p.date === iso);
+    if (!tp) return false;
+    if (LJKV.get('lifejournal.flow.' + iso)) return false;
+    const data = LJStore.loadPageData(tp.id);
+    if ((data.fields || {}).th0) return false;
+
+    // Scripture continuation from yesterday's reading
+    const p = LJPlanner.parseISO(iso);
+    const yIso = LJPlanner.isoFromTs(Date.UTC(p.y, p.m, p.d) - LJPlanner.DAY_MS);
+    const yp = planner.pages.find((pg) => pg.date === yIso);
+    let yRef = null, suggestion = null;
+    if (yp) {
+      const yf = LJStore.loadPageData(yp.id).fields || {};
+      yRef = window.LJBible ? LJBible.parseRef(yf.scr0 || '') : null;
+      if (yRef) suggestion = nextChapterAfter(yRef);
+    }
+
+    flow.planner = planner; flow.tp = tp; flow.iso = iso;
+    flow.yRef = yRef; flow.suggestion = suggestion;
+    flow.thank = ''; flow.tops = ['', '', '']; flow.scr = null;
+    flow.steps = suggestion ? ['thank', 'tops', 'scripture'] : ['thank', 'tops'];
+    flow.step = 0;
+    const day = new Date().toLocaleDateString(undefined, { weekday: 'long' });
+    $('#mfGreeting').textContent = `Happy ${day}.`;
+    $('#library').classList.add('hidden');
+    $('#morningFlow').classList.remove('hidden');
+    renderFlowStep();
+    return true;
+  }
+
+  function renderFlowStep() {
+    const body = $('#mfBody');
+    body.innerHTML = '';
+    const kind = flow.steps[flow.step];
+    $('#mfDots').innerHTML = flow.steps.map((s, i) =>
+      `<span class="${i === flow.step ? 'on' : ''}"></span>`).join('');
+    $('#mfNext').classList.toggle('hidden', kind === 'scripture');
+
+    if (kind === 'thank') {
+      // The question IS the placeholder, like the reference homepage.
+      const inp = el('input', 'mf-input mf-hero');
+      inp.type = 'text';
+      inp.placeholder = 'Let’s start with what you’re thankful for today…';
+      inp.value = flow.thank;
+      inp.addEventListener('input', () => { flow.thank = inp.value; });
+      inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') flowNext(); });
+      body.appendChild(inp);
+      setTimeout(() => inp.focus(), 60);
+    } else if (kind === 'tops') {
+      body.appendChild(el('div', 'mf-label', 'What are 3 things you must get done today?'));
+      flow.tops.forEach((v, i) => {
+        const row = el('div', 'mf-top-row');
+        row.appendChild(el('span', 'mf-num', String(i + 1) + '.'));
+        const inp = el('input', 'mf-input');
+        inp.type = 'text';
+        inp.value = v;
+        inp.addEventListener('input', () => { flow.tops[i] = inp.value; });
+        inp.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            const next = body.querySelectorAll('.mf-input')[i + 1];
+            if (next) next.focus(); else flowNext();
+          }
+        });
+        row.appendChild(inp);
+        body.appendChild(row);
+      });
+      setTimeout(() => { const f = body.querySelector('.mf-input'); if (f) f.focus(); }, 60);
+    } else if (kind === 'scripture') {
+      body.appendChild(el('div', 'mf-label', `You studied ${escapeHtml(flow.yRef.ref)} yesterday.`));
+      body.appendChild(el('p', 'mf-sub', `Ready to continue with ${escapeHtml(flow.suggestion)}?`));
+      const yes = el('button', 'btn primary mf-big', `Yes — read ${escapeHtml(flow.suggestion)}`);
+      yes.onclick = () => { flow.scr = flow.suggestion; finishFlow(); };
+      const no = el('button', 'btn mf-big', 'I’ll pick my own passage');
+      no.onclick = () => { flow.scr = null; finishFlow(); };
+      const wrap = el('div', 'mf-choices');
+      wrap.appendChild(yes); wrap.appendChild(no);
+      body.appendChild(wrap);
+    }
+  }
+
+  function flowNext() {
+    if (flow.step < flow.steps.length - 1) { flow.step++; renderFlowStep(); }
+    else finishFlow();
+  }
+
+  function finishFlow() {
+    const data = LJStore.loadPageData(flow.tp.id);
+    data.fields = data.fields || {};
+    if (flow.thank.trim()) data.fields.th0 = flow.thank.trim();
+    flow.tops.forEach((t, i) => { if (t.trim()) data.fields['top' + i] = t.trim(); });
+    if (flow.scr) data.fields.scr0 = flow.scr;
+    LJStore.savePageData(flow.tp.id, data);
+    LJKV.set('lifejournal.flow.' + flow.iso, '1');
+    $('#morningFlow').classList.add('hidden');
+    openJournal(flow.planner.id);
+    goToDate(flow.iso);
+    scheduleAutoSync();
+    toast('Today is set — have a great one ✦');
+  }
+
+  // ---------- Apple Calendar on the daily schedule ----------
+  const calCache = {};
+  function calOn() {
+    return window.LJCal && LJCal.available() && LJKV.get('lifejournal.cal') !== 'off';
+  }
+  function renderCalEvents(page, layer, s) {
+    if (!calOn() || !page.date) return;
+    if ((page.template !== 'planDay' && page.template !== 'foundationsDaily')) return;
+    const paint = (evts) => {
+      if (currentPage() !== page) return;
+      const L = LJTemplates.dailyLayout();
+      evts.filter((e) => !e.allDay && e.startH >= 5 && e.startH < 23).forEach((e) => {
+        const idx = Math.min(17, Math.floor(e.startH) - 5);
+        const col = L.schedCols[idx < L.schedPerCol ? 0 : 1];
+        const y = L.schedTop + (idx % L.schedPerCol) * L.schedRowH;
+        const d = el('div', 'lj-cal-evt',
+          `<i style="background:${escapeHtml(e.color || '#5a8c6e')}"></i>${escapeHtml(e.time)} ${escapeHtml(e.title)}`);
+        d.style.left = (col.x * s) + 'px';
+        d.style.width = (col.w * s) + 'px';
+        d.style.top = ((y - 31) * s) + 'px';
+        layer.appendChild(d);
+      });
+    };
+    if (calCache[page.date]) { paint(calCache[page.date]); return; }
+    LJCal.events(page.date).then((r) => {
+      if (r && r.events) { calCache[page.date] = r.events; paint(r.events); }
+    });
+  }
+
+  // ---------- Apple sign-in + automatic cross-device sync ----------
+  function appleCode(uid) { return 'apple-' + uid; }
+  let autoSyncTimer = null;
+  function scheduleAutoSync(ms) {
+    if (!state.appleUser || !state.appleUser.userId) return;
+    clearTimeout(autoSyncTimer);
+    autoSyncTimer = setTimeout(async () => {
+      try {
+        flushSave && state.journal && flushSave();
+        const m = await LJSync.upload(appleCode(state.appleUser.userId));
+        LJKV.set('lifejournal.autosync.at', String(m.savedAt || Date.now()));
+      } catch (e) { /* offline is fine — next edit retries */ }
+    }, ms == null ? 30000 : ms);
+  }
+  async function autoSyncLaunch() {
+    if (!(window.LJAuth && LJAuth.available())) return;
+    const st = await LJAuth.status();
+    if (!st || !st.userId) return;
+    state.appleUser = st;
+    LJSync.setCode(appleCode(st.userId));
+    try {
+      const p = await LJSync.fetchRaw(appleCode(st.userId));
+      const localAt = Number(LJKV.get('lifejournal.autosync.at') || 0);
+      if (p && p.savedAt && p.savedAt > localAt) {
+        LJSync.applyPayload(p);
+        LJSync.setLastSync('download');
+        LJKV.set('lifejournal.autosync.at', String(p.savedAt));
+        state.lib = LJStore.loadLibrary();
+      } else if (!p) {
+        scheduleAutoSync(4000);      // first device: seed the cloud copy
+      }
+    } catch (e) { /* offline launch — keep local */ }
   }
 
   // ---------- Desktop sidebar (Five Foundations chips + day footer) ----------
@@ -969,18 +1152,30 @@
     sched.appendChild(shead);
     const isToday = page.date && window.LJPlanner && page.date === LJPlanner.todayISO();
     const nowH = new Date().getHours();
+    const dayEvents = (calOn() && page.date && calCache[page.date]) || [];
+    const evtHours = {};
+    dayEvents.forEach((e) => { if (!e.allDay) (evtHours[Math.floor(e.startH)] = evtHours[Math.floor(e.startH)] || []).push(e); });
     let any = false;
     MOB_HOURS.forEach((h, i) => {
       const id = 'sch' + i;
       const isNow = isToday && h === nowH;
-      if (!state.mobAllHours && !state.fields[id] && !isNow) return;
+      const evts = evtHours[h] || [];
+      if (!state.mobAllHours && !state.fields[id] && !isNow && !evts.length) return;
       any = true;
       const row = el('div', 'm-row m-sched-row' + (isNow ? ' m-now' : ''));
       row.appendChild(el('span', 'm-hour', mobHourLabel(h)));
       row.appendChild(mobField(id, ''));
       if (isNow) row.appendChild(el('span', 'm-now-lab', 'Now'));
       sched.appendChild(row);
+      evts.forEach((e) => sched.appendChild(el('div', 'm-evt',
+        `<i style="background:${escapeHtml(e.color || '#5a8c6e')}"></i>${escapeHtml(e.time)} ${escapeHtml(e.title)}`)));
     });
+    // fetch events once, then re-render with them in place
+    if (calOn() && page.date && !calCache[page.date]) {
+      LJCal.events(page.date).then((r) => {
+        if (r && r.events && currentPage() === page) { calCache[page.date] = r.events; renderMobileDay(); }
+      });
+    }
     if (!any) sched.appendChild(el('p', 'm-empty', 'Nothing scheduled — tap “All hours” to plan the day.'));
     wrap.appendChild(sched);
 
@@ -1155,6 +1350,9 @@
       };
       layer.appendChild(b);
     });
+
+    // Apple Calendar events on the daily schedule (via the iOS shell)
+    renderCalEvents(page, layer, s);
 
     // "Create Bible Study" on the scripture card of daily pages
     if (page.template === 'planDay' || page.template === 'foundationsDaily') {
@@ -1395,7 +1593,20 @@
   }
 
   // ---------- Cloud sync ----------
+  function updateAppleAuthRow() {
+    const row = $('#appleAuthRow');
+    if (!row) return;
+    if (!(window.LJAuth && LJAuth.available())) { row.classList.add('hidden'); return; }
+    row.classList.remove('hidden');
+    const signedIn = state.appleUser && state.appleUser.userId;
+    $('#appleSignIn').classList.toggle('hidden', !!signedIn);
+    $('#appleAuthNote').textContent = signedIn
+      ? `Auto-sync is on${state.appleUser.name ? ' for ' + state.appleUser.name : ''} — your journal backs up and follows you across devices.`
+      : 'Sign in once and your journal syncs automatically across your iPhone, iPad, and Mac.';
+  }
+
   function openSync() {
+    updateAppleAuthRow();
     $('#syncCode').value = LJSync.getCode();
     const last = LJSync.getLastSync();
     if (last) {
@@ -1491,6 +1702,50 @@
     $('#studiesClose').onclick = () => $('#studiesModal').classList.add('hidden');
     $('#studiesSearch').addEventListener('input', () => renderStudiesList($('#studiesSearch').value));
     $('#paywallClose').onclick = () => $('#paywallModal').classList.add('hidden');
+
+    // Apple Calendar toggle (iOS shell only)
+    $('#calBtn').onclick = async () => {
+      if (!(window.LJCal && LJCal.available())) { toast('Calendar sync works inside the iPhone / iPad app'); return; }
+      const st = await LJCal.status();
+      if (st && st.state === 'undetermined') {
+        const r = await LJCal.request();
+        if (r && r.granted) { LJKV.set('lifejournal.cal', 'on'); toast('Calendar connected ✓'); loadPage(state.pageIndex); }
+        else toast('Calendar access declined');
+      } else if (st && st.state === 'denied') {
+        toast('Enable access in Settings → Privacy → Calendars');
+      } else {
+        const off = LJKV.get('lifejournal.cal') === 'off';
+        LJKV.set('lifejournal.cal', off ? 'on' : 'off');
+        Object.keys(calCache).forEach((k) => delete calCache[k]);
+        toast(off ? 'Calendar shown on daily pages' : 'Calendar hidden');
+        loadPage(state.pageIndex);
+      }
+    };
+
+    // Sign in with Apple → automatic sync
+    $('#appleSignIn').onclick = async () => {
+      const r = await LJAuth.signin();
+      if (r && r.userId) {
+        state.appleUser = r;
+        LJSync.setCode(appleCode(r.userId));
+        scheduleAutoSync(0);
+        updateAppleAuthRow();
+        toast('Signed in — your journal now syncs automatically');
+      } else if (r && r.error) {
+        $('#syncStatus').textContent = r.error;
+      }
+    };
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && state.appleUser) scheduleAutoSync(0);
+    });
+
+    // Morning flow
+    $('#mfNext').onclick = flowNext;
+    $('#mfSkip').onclick = () => {
+      if (window.LJPlanner) LJKV.set('lifejournal.flow.' + LJPlanner.todayISO(), '1');
+      $('#morningFlow').classList.add('hidden');
+      $('#library').classList.remove('hidden');
+    };
     $('#paywallRestore').onclick = async () => {
       $('#paywallStatus').textContent = 'Restoring…';
       const r = await LJIAP.restore();
@@ -1624,12 +1879,15 @@
     LJKV.setOnError((msg) => toast(msg));
     await LJKV.init();              // open IndexedDB (+ migrate old localStorage)
     state.lib = LJStore.loadLibrary();
+    // Apple-signed-in devices pull the freshest copy before the UI builds.
+    await Promise.race([autoSyncLaunch(), new Promise((r) => setTimeout(r, 3500))]);
     const savedTheme = LJKV.get('lifejournal.theme') || 'paper';
     state.theme = savedTheme;
     document.body.dataset.theme = savedTheme === 'ink' ? 'ink' : '';
     LJData.setPalette(savedTheme === 'ink' ? 'dark' : 'light');
     if (savedTheme === 'ink') state.color = INK_DEFAULT;
     init();
+    maybeMorningFlow();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootstrap);
