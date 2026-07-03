@@ -190,7 +190,9 @@
       state.canvas = new JournalCanvas($('#bgCanvas'), $('#inkCanvas'), $('#pageWrap'));
       state.canvas.onChange = () => { recordChange(); saveCurrentDebounced(); };
     }
-    loadPage(0);
+    // The planner opens on today's page; other journals open on their cover.
+    const todayIdx = window.LJPlanner ? state.dateIndex[LJPlanner.todayISO()] : null;
+    loadPage(state.journal.kind === 'planner' && todayIdx != null ? todayIdx : 0);
     setMode(defaultMode(), true);
     requestAnimationFrame(relayout);
   }
@@ -678,7 +680,10 @@
     const iso = LJPlanner.todayISO();
     const tp = planner.pages.find((p) => p.date === iso);
     if (!tp) return false;
-    if (LJKV.get('lifejournal.flow.' + iso)) return false;
+    // A finished morning leaves th0 filled — never re-ask then. A skip only
+    // silences the rest of this session (launch also respects the daily flag).
+    if (flow.skippedSession) return false;
+    if (!fromJournal && LJKV.get('lifejournal.flow.' + iso)) return false;
     const data = LJStore.loadPageData(tp.id);
     if ((data.fields || {}).th0) return false;
 
@@ -1746,6 +1751,7 @@
     // Morning flow
     $('#mfNext').onclick = flowNext;
     $('#mfSkip').onclick = () => {
+      flow.skippedSession = true;
       if (window.LJPlanner) LJKV.set('lifejournal.flow.' + LJPlanner.todayISO(), '1');
       $('#morningFlow').classList.add('hidden');
       // If the flow was entered by tapping the journal, continue into it.
