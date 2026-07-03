@@ -8,6 +8,7 @@ import WebKit
 
 @main
 struct LifeJournalShellApp: App {
+    init() { IAP.configureIfPossible() }
     var body: some Scene {
         WindowGroup {
             RootView()
@@ -61,11 +62,13 @@ final class WebModel: NSObject, ObservableObject, WKNavigationDelegate {
 
     @Published var failed = false
     let webView: WKWebView
+    private let iapBridge = IAPBridge()
 
     override init() {
         let config = WKWebViewConfiguration()
         config.allowsInlineMediaPlayback = true
         config.websiteDataStore = .default()   // persistent IndexedDB / localStorage
+        config.userContentController.add(iapBridge, name: "ljiap")
 
         let wv = WKWebView(frame: .zero, configuration: config)
         wv.scrollView.contentInsetAdjustmentBehavior = .never
@@ -78,6 +81,7 @@ final class WebModel: NSObject, ObservableObject, WKNavigationDelegate {
         #endif
         self.webView = wv
         super.init()
+        iapBridge.webView = wv
         wv.navigationDelegate = self
         load()
     }

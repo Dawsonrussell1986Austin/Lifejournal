@@ -735,6 +735,8 @@
     if (!parsed) { toast('Pick a passage first — e.g. John 3 or John 3:16'); return; }
     const existing = loadStudies().find((s) => s.ref === parsed.ref);
     if (existing && !force) { openStudies(existing.id); return; }
+    // Generating new studies is a Pro feature once purchases are configured.
+    if (!(await LJIAP.isPro())) { openPaywall(); return; }
     // Go straight into the Bible Studies journal; the study forms in place.
     $('#studiesModal').classList.remove('hidden');
     $('#studiesList').classList.add('hidden');
@@ -761,6 +763,38 @@
       d.innerHTML = '<h2 class="sd-ref">' + escapeHtml(parsed.ref) + '</h2><p class="sync-note">' + escapeHtml(e.message) + '</p>';
       d.appendChild(retry);
     }
+  }
+
+  // ---------- Paywall (RevenueCat via the iOS shell) ----------
+  async function openPaywall() {
+    const modal = $('#paywallModal'), plans = $('#paywallPlans'), status = $('#paywallStatus');
+    modal.classList.remove('hidden');
+    status.textContent = '';
+    plans.innerHTML = '<p class="study-loading">Loading plans…</p>';
+    const o = await LJIAP.offerings();
+    plans.innerHTML = '';
+    if (!o || !o.packages || !o.packages.length) {
+      plans.innerHTML = '<p class="sync-note">Plans aren’t available right now — please try again later.</p>';
+      return;
+    }
+    o.packages.forEach((p) => {
+      const b = el('button', 'pw-plan',
+        `<span class="pw-title">${escapeHtml(p.title)}</span>
+         <span class="pw-price">${escapeHtml(p.price)}${p.period ? ' / ' + p.period : ''}</span>`);
+      b.onclick = async () => {
+        status.textContent = 'Opening App Store…';
+        const r = await LJIAP.purchase(p.id);
+        if (r && r.pro) {
+          modal.classList.add('hidden');
+          toast('Welcome to Life Journal Pro ✦');
+        } else if (r && r.cancelled) {
+          status.textContent = '';
+        } else {
+          status.textContent = (r && r.error) || 'That didn’t go through — please try again.';
+        }
+      };
+      plans.appendChild(b);
+    });
   }
 
   // ---------- Bible Studies journal (list + detail with notes) ----------
@@ -1456,6 +1490,13 @@
     $('#navStudies').onclick = () => openStudies();
     $('#studiesClose').onclick = () => $('#studiesModal').classList.add('hidden');
     $('#studiesSearch').addEventListener('input', () => renderStudiesList($('#studiesSearch').value));
+    $('#paywallClose').onclick = () => $('#paywallModal').classList.add('hidden');
+    $('#paywallRestore').onclick = async () => {
+      $('#paywallStatus').textContent = 'Restoring…';
+      const r = await LJIAP.restore();
+      if (r && r.pro) { $('#paywallModal').classList.add('hidden'); toast('Pro restored ✦'); }
+      else $('#paywallStatus').textContent = (r && r.error) || 'No previous purchase found for this Apple ID.';
+    };
     $('#searchClose').onclick = () => $('#searchModal').classList.add('hidden');
     $('#searchInput').addEventListener('input', () => runSearch($('#searchInput').value));
     $('#moreBtn').onclick = () => {

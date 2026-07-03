@@ -549,6 +549,18 @@ body[data-theme="ink"] .lj-study:hover { background: var(--accent); color: #fff;
 .sd-notes:focus { border-color: var(--accent); }
 #studiesSearch { margin-bottom: 12px; }
 
+/* Paywall */
+.pw-pro { font-style: italic; color: var(--red); }
+.pw-plans { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+.pw-plan {
+  display: flex; justify-content: space-between; align-items: center;
+  border: 1.5px solid var(--rule); background: var(--panel-2); color: var(--ink);
+  border-radius: 14px; padding: 15px 18px; cursor: pointer; font-size: 15px;
+}
+.pw-plan:hover { border-color: var(--accent); }
+.pw-title { font-weight: 600; }
+.pw-price { color: var(--accent); font-weight: 700; }
+
 /* The Bible Studies journal reads as a full page, not a popup. */
 #studiesModal { align-items: stretch; padding: 20px; }
 #studiesModal .modal-card { width: 880px; max-height: none; height: 100%; margin: 0 auto; }

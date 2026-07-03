@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		2B0000000000000000000012 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 2B0000000000000000000011 /* RevenueCat */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		2B0000000000000000000004 /* LifeJournalShell.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LifeJournalShell.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -23,6 +27,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2B0000000000000000000012 /* RevenueCat in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -64,6 +69,9 @@
 				2B0000000000000000000009 /* LifeJournalShell */,
 			);
 			name = LifeJournalShell;
+			packageProductDependencies = (
+				2B0000000000000000000011 /* RevenueCat */,
+			);
 			productName = LifeJournalShell;
 			productReference = 2B0000000000000000000004 /* LifeJournalShell.app */;
 			productType = "com.apple.product-type.application";
@@ -95,6 +103,9 @@
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 2B0000000000000000000003 /* Products */;
+			packageReferences = (
+				2B0000000000000000000010 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
+			);
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -323,6 +334,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		2B0000000000000000000010 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		2B0000000000000000000011 /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2B0000000000000000000010 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCat;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 2B0000000000000000000001 /* Project object */;
 }

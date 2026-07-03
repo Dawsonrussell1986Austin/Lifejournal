@@ -40,6 +40,34 @@ In App Store Connect → your app → **TestFlight** tab:
 - **External testing** (up to 10,000 testers, needs a one-time beta review):
   create an external group and submit the build for beta review.
 
+## RevenueCat (subscriptions)
+
+The shell already includes the RevenueCat SDK and a JS bridge; the web app
+gates **AI Bible study generation** behind a `pro` entitlement and shows a
+paywall. Until the steps below are done, everything stays unlocked (the
+bridge reports "not configured"), so beta testing is unaffected.
+
+1. **App Store Connect — money paperwork (one-time):** Business →
+   Agreements: sign the *Paid Applications* agreement and complete banking +
+   tax info. IAP testing will not work without this.
+2. **Create the subscription:** Your app → Monetization → Subscriptions →
+   create a group ("Pro"), then add products, e.g.
+   `lj_pro_monthly` and `lj_pro_annual`, with prices. Add localization
+   (display name + description) so they can be submitted with the app later.
+3. **RevenueCat account:** sign up at https://app.revenuecat.com → New
+   project "Life Journal" → add an **App Store** app with bundle id
+   `com.raiselaunch.lifejournal`.
+4. **Connect App Store Connect to RevenueCat:** in App Store Connect →
+   Users & Access → Integrations → **In-App Purchase** keys → generate one,
+   upload the .p8 (plus Key ID + Issuer ID) into the RevenueCat app config.
+5. **In RevenueCat:** create entitlement **`pro`**, attach both products to
+   it; create an Offering ("default") with the monthly + annual packages.
+6. **Drop the key in the shell:** RevenueCat → API keys → copy the *public*
+   Apple key (`appl_…`) into `IAP.apiKey` in
+   `LifeJournalShell/IAPBridge.swift`, re-archive, upload.
+7. **Test:** TestFlight builds use the sandbox automatically — buy with your
+   sandbox Apple ID, confirm the ✦ Study button unlocks, and Restore works.
+
 ## Notes
 
 - Export compliance is pre-answered (`ITSAppUsesNonExemptEncryption = NO`) since the
