@@ -322,7 +322,9 @@
       inp.dataset.idx = idx;
       const size = f.size || 26;
       const fs = (size * 0.86 - 2) * s;   // 2pt smaller than the writing line height
-      if (f.serif) { inp.style.fontFamily = 'Georgia, serif'; inp.style.fontStyle = 'italic'; }
+      if (f.serif) { inp.style.fontFamily = 'Georgia, serif'; inp.style.fontStyle = f.italic ? 'italic' : 'normal'; }
+      // completed Top-3 items read as done: struck through and muted
+      if (state.checks[f.id]) { inp.style.textDecoration = 'line-through'; inp.style.opacity = '.55'; }
       inp.style.left = (f.x * s) + 'px';
       inp.style.width = (f.w * s) + 'px';
       inp.style.fontSize = fs + 'px';
@@ -680,6 +682,7 @@
         else { state.checks[r.id] = true; b.classList.add('checked'); }
         recordChange();
         saveCurrentDebounced();
+        renderFieldLayer();   // apply/remove strikethrough on the matching field
       };
       layer.appendChild(b);
     });

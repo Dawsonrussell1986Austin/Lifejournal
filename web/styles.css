@@ -306,11 +306,12 @@ body[data-theme="ink"] .toolbar { background: #1c2330; border: 1px solid #262e3c
 .lj-check.pill { border-radius: 999px; color: transparent; font-weight: 700; letter-spacing: 1px; font-family: inherit; }
 .lj-check.pill.checked { background: var(--accent); border-color: var(--accent); color: #fff; }
 .lj-check.pill.checked::after { content: none; }
-.lj-now { position: absolute; pointer-events: none; height: 0; border-top: 2px solid var(--red); }
-.lj-now::before { content: ''; position: absolute; left: -4px; top: -4px; width: 8px; height: 8px; border-radius: 50%; background: var(--red); }
+.lj-now { position: absolute; pointer-events: none; height: 0; border-top: 1.5px solid var(--red); }
+.lj-now::before { content: ''; position: absolute; left: -4px; top: -4px; width: 7px; height: 7px; border-radius: 50%; background: var(--red); }
 .lj-now-lab {
-  position: absolute; left: 0; top: -10px; transform: translateY(-100%);
-  background: var(--red); color: #fff; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 8px; white-space: nowrap;
+  position: absolute; right: 0; left: auto; top: -4px; transform: translateY(-100%);
+  color: var(--red); font-size: 10px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; white-space: nowrap;
 }
 
 /* Text layer (z4) */

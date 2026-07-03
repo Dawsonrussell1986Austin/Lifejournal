@@ -415,22 +415,22 @@ window.LJTemplates = (function () {
   }
   function dailyFields() {
     const L = dailyLayout(), f = [];
-    f.push({ id: 'th0', x: M, y: L.thankY, w: L.thankW, size: 26, serif: true });
+    f.push({ id: 'th0', x: M, y: L.thankY, w: L.thankW, size: 26, serif: true, italic: true });
     SCHED_HOURS.forEach((h, i) => {
       const col = L.schedCols[i < L.schedPerCol ? 0 : 1];
       const y = L.schedTop + (i % L.schedPerCol) * L.schedRowH;
       f.push({ id: 'sch' + i, x: col.x, y, w: col.w, size: 21, serif: true });
     });
     for (let i = 0; i < 3; i++) f.push({ id: 'top' + i, x: L.rx + 34, y: L.top3Y + i * L.top3Gap, w: L.rw - 34, size: 21, serif: true });
-    L.scr.d.forEach((y, i) => f.push({ id: 'scr' + i, x: L.rx, y, w: L.rw, size: 20, serif: true, bible: i === 0 }));
+    L.scr.d.forEach((y, i) => f.push({ id: 'scr' + i, x: L.rx, y, w: L.rw, size: 20, serif: true, italic: true, bible: i === 0 }));
     L.obs.d.forEach((y, i) => f.push({ id: 'obs' + i, x: L.rx, y, w: L.rw, size: 20, serif: true }));
     L.gos.d.forEach((y, i) => f.push({ id: 'gos' + i, x: L.rx, y, w: L.rw, size: 20, serif: true }));
-    for (let i = 0; i < L.jrnRows; i++) f.push({ id: 'jrn' + i, x: M, y: L.jrnTop + i * L.jrnGap, w: L.leftW, size: 22, serif: true });
+    for (let i = 0; i < L.jrnRows; i++) f.push({ id: 'jrn' + i, x: M, y: L.jrnTop + i * L.jrnGap, w: L.leftW, size: 22, serif: true, italic: true });
     return f;
   }
   function daySection(ctx, title, prompt, x, y) {
     ctx.save();
-    ctx.font = `700 12px ${SANS}`; ctx.fillStyle = COLORS.ink; ctx.textBaseline = 'alphabetic';
+    ctx.font = `700 12px ${SANS}`; ctx.fillStyle = COLORS.softInk; ctx.textBaseline = 'alphabetic';
     setLetterSpacing(ctx, 1.5); ctx.fillText(title, x, y);
     const w = ctx.measureText(title).width;
     setLetterSpacing(ctx, 0); ctx.restore();
@@ -455,21 +455,21 @@ window.LJTemplates = (function () {
       text(ctx, d, x, M + 66, `700 11px ${SANS}`, on ? '#fff' : COLORS.softInk);
     });
     ctx.textAlign = 'left'; ctx.restore();
-    hline(ctx, M, L.thankY + 4, L.thankW, COLORS.rule);
+    dotLine(ctx, M, L.thankY + 4, L.thankW);
 
     // Two-column daily schedule, 5a–1p / 2p–10p
     setLetterSpacing(ctx, 1.5);
-    text(ctx, 'DAILY SCHEDULE · 5 AM – 10 PM', M, L.schedLabelY, `700 12px ${SANS}`, COLORS.ink);
+    text(ctx, 'DAILY SCHEDULE · 5 AM – 10 PM', M, L.schedLabelY, `700 12px ${SANS}`, COLORS.softInk);
     setLetterSpacing(ctx, 0);
     SCHED_HOURS.forEach((h, i) => {
       const col = L.schedCols[i < L.schedPerCol ? 0 : 1];
       const y = L.schedTop + (i % L.schedPerCol) * L.schedRowH;
       text(ctx, hourLabel(h), col.lx + 4, y, `600 11px ${SANS}`, COLORS.softInk);
-      hline(ctx, col.x, y + 4, col.w, COLORS.faint);
+      dotLine(ctx, col.x, y + 4, col.w);
     });
 
     // Journal fills the lower-left
-    setLetterSpacing(ctx, 1.5); text(ctx, 'JOURNAL / NOTES / PRAYER', M, L.jrnLabelY, `700 12px ${SANS}`, COLORS.ink); setLetterSpacing(ctx, 0);
+    setLetterSpacing(ctx, 1.5); text(ctx, 'JOURNAL / NOTES / PRAYER', M, L.jrnLabelY, `700 12px ${SANS}`, COLORS.softInk); setLetterSpacing(ctx, 0);
     for (let i = 0; i < L.jrnRows; i++) hline(ctx, M, L.jrnTop + i * L.jrnGap + 4, L.leftW, COLORS.faint);
 
     // Right column: Top 3 (check on the left), Foundations chips, scripture card
@@ -494,11 +494,11 @@ window.LJTemplates = (function () {
     roundRect(ctx, L.card.x, L.card.y, L.card.w, L.card.h, 16); ctx.fill();
     ctx.restore();
     daySection(ctx, 'SCRIPTURE', 'What did I read?', L.rx, L.scr.y);
-    L.scr.d.forEach((y) => dotLine(ctx, L.rx, y, L.rw));
+    L.scr.d.forEach((y) => dotLine(ctx, L.rx, y, L.rw, COLORS.faint));
     daySection(ctx, 'OBSERVE & APPLY', 'What did I learn?', L.rx, L.obs.y);
-    L.obs.d.forEach((y) => dotLine(ctx, L.rx, y, L.rw));
+    L.obs.d.forEach((y) => dotLine(ctx, L.rx, y, L.rw, COLORS.faint));
     daySection(ctx, 'THE GOSPEL', 'How does this point to Christ?', L.rx, L.gos.y);
-    L.gos.d.forEach((y) => dotLine(ctx, L.rx, y, L.rw));
+    L.gos.d.forEach((y) => dotLine(ctx, L.rx, y, L.rw, COLORS.faint));
 
     // Top-3 checkboxes (the foundations chips draw their own outline above)
     dailyChecks().forEach((r) => { if (!r.kind) checkbox(ctx, r.x, r.y, r.size); });
