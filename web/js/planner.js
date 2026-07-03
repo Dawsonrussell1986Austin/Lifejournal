@@ -135,6 +135,7 @@ window.LJPlanner = (function () {
       { id: uid(), template: 'cover' },
       { id: uid(), template: 'planYear', year: year }
     ];
+    for (let q = 0; q < 4; q++) pages.push({ id: uid(), template: 'foundationsGoals', year: year, quarter: q });
     for (let m = 0; m < 12; m++) pages.push({ id: uid(), template: 'planMonth', year: year, month: m });
 
     const jan1 = Date.UTC(year, 0, 1);
@@ -149,7 +150,7 @@ window.LJPlanner = (function () {
       pages.push({ id: uid(), template: 'planWeekSermon', weekStart: wIso });
       for (let i = 0; i < 7; i++) pages.push({ id: uid(), template: 'planDay', date: isoFromTs(ws + i * DAY_MS) });
     }
-    return { id: uid(), title: `LifeJournal ${year}`, cover: 'navy', kind: 'planner', year: year, pver: 3, pages: pages };
+    return { id: uid(), title: `LifeJournal ${year}`, cover: 'navy', kind: 'planner', year: year, pver: 4, pages: pages };
   }
 
   // Upgrade older planners in place so existing pages (and their handwriting)
@@ -184,6 +185,15 @@ window.LJPlanner = (function () {
       }
       journal.pages = out;
       journal.pver = 3;
+      changed = true;
+    }
+
+    if ((journal.pver || 1) < 4) {
+      // Insert the four quarterly 12-week goal pages right after the year page.
+      const yi = journal.pages.findIndex((p) => p.template === 'planYear');
+      const goals = [0, 1, 2, 3].map((q) => ({ id: LJData.uid(), template: 'foundationsGoals', year: journal.year, quarter: q }));
+      journal.pages.splice(yi >= 0 ? yi + 1 : 1, 0, ...goals);
+      journal.pver = 4;
       changed = true;
     }
 

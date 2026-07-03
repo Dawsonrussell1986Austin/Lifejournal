@@ -386,11 +386,11 @@ window.LJTemplates = (function () {
       thankY: M + 78, thankW: 470,
       schedLabelY: M + 128, schedTop: M + 172, schedRowH: 46, schedPerCol: 9,
       top3Y: M + 168, top3Gap: 44,
-      fndLabelY: M + 320, fndRows: [M + 348, M + 388], chipH: 30,
-      card: { x: rx - 18, y: M + 436, w: rw + 36, h: 682 },
-      scr: { y: M + 478, d: [M + 520, M + 556] },
-      obs: { y: M + 602, d: [0, 1, 2, 3, 4, 5].map((i) => M + 644 + i * 36) },
-      gos: { y: M + 870, d: [0, 1, 2, 3, 4, 5].map((i) => M + 912 + i * 36) },
+      card: { x: rx - 18, y: M + 320, w: rw + 36, h: 682 },
+      scr: { y: M + 362, d: [M + 404, M + 440] },
+      obs: { y: M + 486, d: [0, 1, 2, 3, 4, 5].map((i) => M + 528 + i * 36) },
+      gos: { y: M + 754, d: [0, 1, 2, 3, 4, 5].map((i) => M + 796 + i * 36) },
+      fndLabelY: M + 1052, fndRows: [M + 1080, M + 1120], chipH: 30,
       jrnLabelY: M + 618, jrnTop: M + 656, jrnGap: 40, jrnRows: 12
     };
   }
@@ -693,6 +693,7 @@ window.LJTemplates = (function () {
       case 'teachingNotes': return lineFields('t', M, M + 154, W - 2 * M, 23, 46, 26);
       case 'sermonNotes': return sermonNotesFields();
       case 'prayerList': return prayerListFields();
+      case 'foundationsGoals': return foundationsGoalsFields();
       case 'planWeek': return planWeekFields();
       case 'gratitude': return gratitudeFields();
       case 'lined': return lineFields('l', M, M + 48, W - 2 * M, 26, 48, 28);
@@ -796,6 +797,53 @@ window.LJTemplates = (function () {
     dotRows(ctx, M, M + 790, W - 2 * M, 7, 30);
   }
 
+  // ---- Five Foundations 12-week goal setting (one page per quarter) ----
+  const QUARTER_RANGES = ['January – March', 'April – June', 'July – September', 'October – December'];
+  function goalsLayout() {
+    const top = M + 190, secH = 196;
+    return { top, secH, goalY: 48, whyY: 100, stepY: 152, labelW: 104 };
+  }
+  function foundationsGoals(ctx, o) {
+    const L = goalsLayout();
+    setLetterSpacing(ctx, 2);
+    text(ctx, 'FIVE FOUNDATIONS', M, M + 34, `700 12px ${SANS}`, COLORS.softInk);
+    setLetterSpacing(ctx, 0);
+    text(ctx, '12-Week Goals', M, M + 84, `600 40px ${SERIF}`, COLORS.ink);
+    const q = o.quarter == null ? 0 : o.quarter;
+    ctx.save(); ctx.textAlign = 'right';
+    text(ctx, `Quarter ${q + 1} · ${QUARTER_RANGES[q]}${o.year ? ' ' + o.year : ''}`, W - M, M + 84, `italic 17px ${SERIF}`, COLORS.softInk);
+    ctx.restore();
+    caption(ctx, 'One measurable goal per foundation for the next twelve weeks — with why it matters and the first step.', M, M + 122);
+    hline(ctx, M, M + 144, W - 2 * M, COLORS.rule);
+
+    FND_LABELS.forEach((name, i) => {
+      const y0 = L.top + i * L.secH;
+      // foundation name + index
+      text(ctx, String(i + 1), M, y0 + 8, `700 26px ${SERIF}`, COLORS.faint);
+      setLetterSpacing(ctx, 2);
+      text(ctx, name, M + 40, y0 + 6, `700 16px ${SANS}`, COLORS.accent);
+      setLetterSpacing(ctx, 0);
+      const rows = [['GOAL', L.goalY], ['WHY IT MATTERS', L.whyY], ['FIRST STEP', L.stepY]];
+      rows.forEach(([lab, dy]) => {
+        setLetterSpacing(ctx, 1.5);
+        text(ctx, lab, M, y0 + dy, `600 10.5px ${SANS}`, COLORS.softInk);
+        setLetterSpacing(ctx, 0);
+        dotLine(ctx, M + L.labelW + 14, y0 + dy + 2, W - 2 * M - L.labelW - 14);
+      });
+      if (i < 4) hline(ctx, M, y0 + L.secH - 24, W - 2 * M, COLORS.faint);
+    });
+  }
+  function foundationsGoalsFields() {
+    const L = goalsLayout(), f = [];
+    FND_LABELS.forEach((name, i) => {
+      const y0 = L.top + i * L.secH, x = M + L.labelW + 16, w = W - 2 * M - L.labelW - 16;
+      f.push({ id: 'g' + i + 'goal', x, y: y0 + L.goalY + 2, w, size: 22, serif: true });
+      f.push({ id: 'g' + i + 'why', x, y: y0 + L.whyY + 2, w, size: 20, serif: true });
+      f.push({ id: 'g' + i + 'step', x, y: y0 + L.stepY + 2, w, size: 20, serif: true });
+    });
+    return f;
+  }
+
   function weeklyFoundationsLayout() {
     return { progLabelY: M + 340, progY: M + 376, progGap: 40, prayerY: M + 600, habitY: M + 760 };
   }
@@ -844,7 +892,7 @@ window.LJTemplates = (function () {
     cover, soap, sermonNotes, prayerList, gratitude, dailyPlanner,
     weeklyTop3, weeklySchedule, monthlyCalendar, notesTasks, lined, dotted, blank,
     planYear, planMonth, planDay, planWeek, planWeekSermon,
-    foundationsDaily, weeklyPrayer, weeklyFoundations, teachingNotes
+    foundationsDaily, weeklyPrayer, weeklyFoundations, teachingNotes, foundationsGoals
   };
 
   // Mix a hex color toward white by `amt` (0..1). Used for the soft paper tint.

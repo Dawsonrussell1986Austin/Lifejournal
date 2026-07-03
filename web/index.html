@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#4a5f50" />
   <title>Life Journal</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%234a5f50'/%3E%3Ctext x='8' y='12' font-size='11' text-anchor='middle' fill='%23f4f1e8'%3E%E2%9C%9D%3C/text%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="styles.css?v=17" />
+  <link rel="stylesheet" href="styles.css?v=18" />
 </head>
 <body>
   <!-- Library / shelf -->
@@ -56,6 +56,8 @@
       <nav class="side-nav">
         <button id="navToday" class="side-link">Today</button>
         <button id="navCalendar" class="side-link">Calendar</button>
+        <button id="navGoals" class="side-link">Goals</button>
+        <button id="navStudies" class="side-link">Bible Studies</button>
         <button id="navJournals" class="side-link">Journals</button>
         <button id="navSearch" class="side-link">Search</button>
       </nav>
@@ -124,6 +126,7 @@
       <nav id="mobileTabs" class="mobile-tabs hidden">
         <button data-mt="today"><i>☀</i><span>Today</span></button>
         <button data-mt="calendar"><i>▦</i><span>Calendar</span></button>
+        <button data-mt="studies"><i>✦</i><span>Studies</span></button>
         <button data-mt="journals"><i>▤</i><span>Journals</span></button>
         <button data-mt="search"><i>⌕</i><span>Search</span></button>
       </nav>
@@ -139,6 +142,21 @@
       </div>
       <input id="searchInput" class="text-input" type="text" placeholder="Search typed entries in this journal…" autocomplete="off" />
       <div id="searchResults" class="search-results"></div>
+    </div>
+  </div>
+
+  <!-- Bible Studies journal -->
+  <div id="studiesModal" class="modal hidden">
+    <div class="modal-card wide">
+      <div class="modal-head">
+        <h2>Bible Studies</h2>
+        <button id="studiesClose" class="btn">Close</button>
+      </div>
+      <div id="studiesList">
+        <input id="studiesSearch" class="text-input" type="text" placeholder="Search your studies…" autocomplete="off" />
+        <div id="studiesEntries" class="search-results"></div>
+      </div>
+      <div id="studyDetail" class="hidden"></div>
     </div>
   </div>
 
@@ -219,15 +237,15 @@
 
   <div id="toast" class="toast hidden"></div>
 
-  <script src="js/data.js?v=17"></script>
-  <script src="js/bible.js?v=17"></script>
-  <script src="js/storage.js?v=17"></script>
-  <script src="js/templates.js?v=17"></script>
-  <script src="js/planner.js?v=17"></script>
-  <script src="js/store.js?v=17"></script>
-  <script src="js/canvas.js?v=17"></script>
-  <script src="js/pdf.js?v=17"></script>
-  <script src="js/sync.js?v=17"></script>
-  <script src="js/app.js?v=17"></script>
+  <script src="js/data.js?v=18"></script>
+  <script src="js/bible.js?v=18"></script>
+  <script src="js/storage.js?v=18"></script>
+  <script src="js/templates.js?v=18"></script>
+  <script src="js/planner.js?v=18"></script>
+  <script src="js/store.js?v=18"></script>
+  <script src="js/canvas.js?v=18"></script>
+  <script src="js/pdf.js?v=18"></script>
+  <script src="js/sync.js?v=18"></script>
+  <script src="js/app.js?v=18"></script>
 </body>
 </html>

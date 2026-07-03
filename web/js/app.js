@@ -149,13 +149,20 @@
 
   // ---------- Editor ----------
   function buildPlannerIndex() {
-    state.dateIndex = {}; state.monthIndex = {}; state.yearPageIndex = -1;
+    state.dateIndex = {}; state.monthIndex = {}; state.yearPageIndex = -1; state.goalsIndex = {};
     if (!state.journal) return;
     state.journal.pages.forEach((p, i) => {
       if (p.date) state.dateIndex[p.date] = i;
       if (p.template === 'planMonth') state.monthIndex[p.month] = i;
       if (p.template === 'planYear') state.yearPageIndex = i;
+      if (p.template === 'foundationsGoals' && p.quarter != null) state.goalsIndex[p.quarter] = i;
     });
+  }
+  function goToGoals() {
+    const q = Math.floor(new Date().getMonth() / 3);
+    const i = state.goalsIndex[q] != null ? state.goalsIndex[q] : state.goalsIndex[0];
+    if (i != null) loadPage(i);
+    else toast('No goals pages in this journal — add one from ＋ Page');
   }
   function goToDate(ds) { const i = state.dateIndex[ds]; if (i != null) loadPage(i); }
   function goToMonth(m) { const i = state.monthIndex[m]; if (i != null) loadPage(i); }
@@ -217,6 +224,7 @@
     if (window.LJPlanner) {
       $('#navToday').classList.toggle('active', !!page.date && page.date === LJPlanner.todayISO());
       $('#navCalendar').classList.toggle('active', page.template === 'planMonth');
+      $('#navGoals').classList.toggle('active', page.template === 'foundationsGoals');
     }
     updatePageMeta();
   }
@@ -472,6 +480,7 @@
       return `${p.shortMonthDay} · ${p.weekdayName.slice(0, 3)}`;
     }
     if (page.template === 'planMonth') return `${LJPlanner.MONTHS[page.month]} ${page.year}`;
+    if (page.template === 'foundationsGoals' && page.quarter != null) return `Q${page.quarter + 1} · 12-Week Goals`;
     if (page.template === 'planYear') return `${page.year} Overview`;
     if (page.template === 'planWeek' && page.weekStart) {
       const p = LJPlanner.partsFor(page.weekStart);
@@ -685,15 +694,30 @@
       return '<p>' + b.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>') + '</p>';
     }).join('');
   }
+  // The Bible Studies journal: every generated study is stored here with its
+  // reference, generation date, and your own notes. Searchable from the
+  // "Bible Studies" tab.
+  function loadStudies() {
+    try { return JSON.parse(LJKV.get('lifejournal.studies') || '[]'); } catch (e) { return []; }
+  }
+  function saveStudies(list) { LJKV.set('lifejournal.studies', JSON.stringify(list)); }
+  function upsertStudy(ref, text) {
+    const list = loadStudies();
+    let e = list.find((s) => s.ref === ref);
+    if (e) { e.study = text; e.created = new Date().toISOString(); }
+    else { e = { id: LJData.uid(), ref, created: new Date().toISOString(), study: text, notes: '' }; list.unshift(e); }
+    saveStudies(list);
+    return e;
+  }
+
   async function openStudy(ref, force) {
     const parsed = window.LJBible && LJBible.parseRef(ref);
     if (!parsed) { toast('Pick a passage first — e.g. John 3 or John 3:16'); return; }
+    const existing = loadStudies().find((s) => s.ref === parsed.ref);
+    if (existing && !force) { openStudies(existing.id); return; }
     const modal = $('#studyModal'), body = $('#studyBody');
     $('#studyTitle').textContent = 'Bible Study · ' + parsed.ref;
     modal.classList.remove('hidden');
-    const cacheKey = 'lifejournal.study.' + parsed.ref;
-    const cached = !force && LJKV.get(cacheKey);
-    if (cached) { body.innerHTML = mdLite(cached); return; }
     body.innerHTML = '<p class="study-loading">Preparing a study on <b>' + escapeHtml(parsed.ref) + '</b> — cultural context, application, and the Gospel thread…</p>';
     try {
       const r = await fetch('/api/study', {
@@ -703,11 +727,79 @@
       });
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || 'Something went wrong.');
-      LJKV.set(cacheKey, j.study);
-      body.innerHTML = mdLite(j.study);
+      const entry = upsertStudy(parsed.ref, j.study);
+      modal.classList.add('hidden');
+      openStudies(entry.id);
+      toast('Saved to your Bible Studies');
     } catch (e) {
       body.innerHTML = '<p class="sync-note">' + escapeHtml(e.message) + '</p>';
     }
+  }
+
+  // ---------- Bible Studies journal (list + detail with notes) ----------
+  function fmtStudyDate(iso) {
+    try { return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }); }
+    catch (e) { return ''; }
+  }
+  function openStudies(detailId) {
+    $('#studiesModal').classList.remove('hidden');
+    if (detailId) renderStudyDetail(detailId);
+    else renderStudiesList($('#studiesSearch').value || '');
+  }
+  function renderStudiesList(q) {
+    $('#studiesList').classList.remove('hidden');
+    $('#studyDetail').classList.add('hidden');
+    const box = $('#studiesEntries');
+    box.innerHTML = '';
+    const needle = (q || '').trim().toLowerCase();
+    const list = loadStudies().filter((s) =>
+      !needle || s.ref.toLowerCase().includes(needle) ||
+      (s.study || '').toLowerCase().includes(needle) ||
+      (s.notes || '').toLowerCase().includes(needle));
+    if (!list.length) {
+      box.innerHTML = '<p class="sync-note">' + (needle ? 'No studies match that search.' :
+        'No studies yet — pick a passage on a daily page and tap ✦ Study.') + '</p>';
+      return;
+    }
+    list.forEach((s) => {
+      const snip = (s.study || '').replace(/###[^\n]*/g, '').replace(/\s+/g, ' ').trim().slice(0, 110);
+      const b = el('button', 'search-hit study-hit',
+        `<div class="sh-ref">${escapeHtml(s.ref)}</div>
+         <div class="sh-date">${fmtStudyDate(s.created)}${s.notes ? ' · has notes' : ''}</div>
+         <div class="sh-snip">${escapeHtml(snip)}…</div>`);
+      b.onclick = () => renderStudyDetail(s.id);
+      box.appendChild(b);
+    });
+  }
+  function renderStudyDetail(id) {
+    const s = loadStudies().find((x) => x.id === id);
+    if (!s) { renderStudiesList(''); return; }
+    $('#studiesList').classList.add('hidden');
+    const d = $('#studyDetail');
+    d.classList.remove('hidden');
+    d.innerHTML = '';
+    const head = el('div', 'sd-head');
+    const back = el('button', 'btn', '‹ All studies');
+    back.onclick = () => renderStudiesList($('#studiesSearch').value || '');
+    head.appendChild(back);
+    const regen = el('button', 'btn', '↻ Regenerate');
+    regen.onclick = () => { $('#studiesModal').classList.add('hidden'); openStudy(s.ref, true); };
+    head.appendChild(regen);
+    d.appendChild(head);
+    d.appendChild(el('h2', 'sd-ref', escapeHtml(s.ref)));
+    d.appendChild(el('div', 'sd-date', 'Generated ' + fmtStudyDate(s.created)));
+    d.appendChild(el('div', 'study-body', mdLite(s.study)));
+    d.appendChild(el('div', 'm-label sd-notes-label', 'My notes'));
+    const ta = document.createElement('textarea');
+    ta.className = 'sd-notes';
+    ta.placeholder = 'What is God showing you through this passage?';
+    ta.value = s.notes || '';
+    ta.addEventListener('input', () => {
+      const list = loadStudies();
+      const e2 = list.find((x) => x.id === id);
+      if (e2) { e2.notes = ta.value; saveStudies(list); }
+    });
+    d.appendChild(ta);
   }
 
   // ---------- Phone-native daily view ----------
@@ -1333,6 +1425,10 @@
     };
     $('#navJournals').onclick = backToLibrary;
     $('#navSearch').onclick = openSearch;
+    $('#navGoals').onclick = goToGoals;
+    $('#navStudies').onclick = () => openStudies();
+    $('#studiesClose').onclick = () => $('#studiesModal').classList.add('hidden');
+    $('#studiesSearch').addEventListener('input', () => renderStudiesList($('#studiesSearch').value));
     $('#searchClose').onclick = () => $('#searchModal').classList.add('hidden');
     $('#studyClose').onclick = () => $('#studyModal').classList.add('hidden');
     $('#studyRegen').onclick = () => openStudy(state.fields.scr0 || $('#studyTitle').textContent.replace('Bible Study · ', ''), true);
@@ -1361,6 +1457,7 @@
           goToMonth(m);
         }
         else if (k === 'journals') backToLibrary();
+        else if (k === 'studies') openStudies();
         else if (k === 'search') openSearch();
       };
     });
