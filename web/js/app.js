@@ -322,6 +322,7 @@
       inp.dataset.idx = idx;
       const size = f.size || 26;
       const fs = (size * 0.86 - 2) * s;   // 2pt smaller than the writing line height
+      if (f.serif) { inp.style.fontFamily = 'Georgia, serif'; inp.style.fontStyle = 'italic'; }
       inp.style.left = (f.x * s) + 'px';
       inp.style.width = (f.w * s) + 'px';
       inp.style.fontSize = fs + 'px';
@@ -666,12 +667,14 @@
     const s = (state.canvas && state.canvas.scaleFactor) || 1;
 
     (LJTemplates.checkRects(page.template) || []).forEach((r) => {
-      const b = el('button', 'lj-check' + (state.checks[r.id] ? ' checked' : ''));
+      const pill = r.kind === 'pill';
+      const b = el('button', 'lj-check' + (pill ? ' pill' : '') + (state.checks[r.id] ? ' checked' : ''));
       b.style.left = (r.x * s) + 'px';
       b.style.top = (r.y * s) + 'px';
-      b.style.width = (r.size * s) + 'px';
-      b.style.height = (r.size * s) + 'px';
-      b.style.fontSize = (r.size * s) + 'px';
+      b.style.width = ((pill ? r.w : r.size) * s) + 'px';
+      b.style.height = ((pill ? r.h : r.size) * s) + 'px';
+      b.style.fontSize = ((pill ? 10 : r.size) * s) + 'px';
+      if (pill) b.textContent = r.label;
       b.onclick = () => {
         if (state.checks[r.id]) { delete state.checks[r.id]; b.classList.remove('checked'); }
         else { state.checks[r.id] = true; b.classList.add('checked'); }

@@ -301,6 +301,11 @@ body[data-theme="ink"] .toolbar { background: #1c2330; border: 1px solid #262e3c
 .lj-check:active { transform: scale(.9); }
 .lj-check.checked { background: var(--accent); border-color: var(--accent); }
 .lj-check.checked::after { content: '✓'; color: #fff; font-size: .82em; font-weight: 800; line-height: 1; }
+/* Five Foundations pill chips: the canvas draws the outline + label; the
+   overlay only becomes visible when checked (filled green, white label). */
+.lj-check.pill { border-radius: 999px; color: transparent; font-weight: 700; letter-spacing: 1px; font-family: inherit; }
+.lj-check.pill.checked { background: var(--accent); border-color: var(--accent); color: #fff; }
+.lj-check.pill.checked::after { content: none; }
 .lj-now { position: absolute; pointer-events: none; height: 0; border-top: 2px solid var(--red); }
 .lj-now::before { content: ''; position: absolute; left: -4px; top: -4px; width: 8px; height: 8px; border-radius: 50%; background: var(--red); }
 .lj-now-lab {

@@ -288,10 +288,12 @@ window.JournalCanvas = (function () {
       // than fillText's horizontal glyph squeeze.
       let fs = (f.size || 26) * 0.86 - 2;
       const str = String(v), maxW = f.w - 4;
-      ctx.font = `400 ${fs}px ${SANS}`;
+      const fam = f.serif ? 'Georgia, serif' : SANS;
+      const style = f.serif ? 'italic ' : '';
+      ctx.font = `${style}400 ${fs}px ${fam}`;
       while (fs > 9 && ctx.measureText(str).width > maxW) {
         fs -= 1;
-        ctx.font = `400 ${fs}px ${SANS}`;
+        ctx.font = `${style}400 ${fs}px ${fam}`;
       }
       ctx.fillText(str, f.x + 2, f.y - 5, maxW);
     }
@@ -307,6 +309,20 @@ window.JournalCanvas = (function () {
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     for (const r of rects) {
       if (!checks[r.id]) continue;
+      if (r.kind === 'pill') {
+        // filled pill with its label in white (matches the on-screen chip)
+        ctx.fillStyle = '#2f4a3b';
+        ctx.beginPath();
+        const rr = r.h / 2;
+        ctx.roundRect ? ctx.roundRect(r.x, r.y, r.w, r.h, rr) : ctx.rect(r.x, r.y, r.w, r.h);
+        ctx.fill();
+        ctx.save();
+        ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.font = '700 10px -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif';
+        ctx.fillText(r.label, r.x + r.w / 2, r.y + r.h / 2 + 1);
+        ctx.restore();
+        continue;
+      }
       const s = r.size;
       ctx.lineWidth = Math.max(2, s * 0.14);
       ctx.beginPath();
