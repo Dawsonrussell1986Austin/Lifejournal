@@ -221,6 +221,11 @@
     renderInteractiveLayer();
     renderSideChips();
     renderMobileDay();
+    // Always land at the top of a page you navigate to.
+    const stage = $('#stage');
+    if (stage) { stage.scrollTop = 0; stage.scrollLeft = 0; }
+    const mob = $('#mobileDay');
+    if (mob) mob.scrollTop = 0;
     if (window.LJPlanner) {
       $('#navToday').classList.toggle('active', !!page.date && page.date === LJPlanner.todayISO());
       $('#navCalendar').classList.toggle('active', page.template === 'planMonth');
