@@ -211,6 +211,11 @@
     renderLinkLayer();
     renderPhotoLayer();
     renderInteractiveLayer();
+    renderSideChips();
+    if (window.LJPlanner) {
+      $('#navToday').classList.toggle('active', !!page.date && page.date === LJPlanner.todayISO());
+      $('#navCalendar').classList.toggle('active', page.template === 'planMonth');
+    }
     updatePageMeta();
   }
 
@@ -425,6 +430,7 @@
     renderFieldLayer();
     renderTextLayer();
     renderInteractiveLayer();
+    renderSideChips();
     saveCurrentDebounced();
   }
   function saveCurrentDebounced() {
@@ -612,6 +618,83 @@
     if (isText) toast('Text tool — tap the page to type'); else deselectText();
   }
 
+  // ---------- Desktop sidebar (Five Foundations chips + day footer) ----------
+  const SIDE_FND = ['FAITH', 'FAMILY', 'FINANCES', 'FITNESS', 'FOCUS'];
+  function renderSideChips() {
+    const box = $('#sideChips');
+    if (!box) return;
+    box.innerHTML = '';
+    const sideDay = $('#sideDay');
+    if (!state.journal || state.journal.kind !== 'planner' || !window.LJPlanner) { sideDay.textContent = ''; return; }
+    const iso = LJPlanner.todayISO();
+    const idx = state.dateIndex[iso];
+    const today = idx != null ? state.journal.pages[idx] : null;
+    const onToday = today && currentPage() && currentPage().id === today.id;
+    const checks = today ? (onToday ? state.checks : LJStore.loadPageData(today.id).checks) : {};
+    SIDE_FND.forEach((lab, i) => {
+      const id = 'fnd' + i;
+      const b = el('button', 'side-chip' + (checks[id] ? ' on' : ''), lab);
+      b.onclick = () => {
+        if (!today) return;
+        if (onToday) {
+          if (state.checks[id]) delete state.checks[id]; else state.checks[id] = true;
+          recordChange();
+          saveCurrentDebounced();
+          renderInteractiveLayer();
+        } else {
+          const data = LJStore.loadPageData(today.id);
+          if (data.checks[id]) delete data.checks[id]; else data.checks[id] = true;
+          LJStore.savePageData(today.id, data);
+        }
+        renderSideChips();
+      };
+      box.appendChild(b);
+    });
+    const doy = dayOfYear(new Date());
+    let onPace = false;
+    if (today) {
+      const d = onToday ? pageData() : LJStore.loadPageData(today.id);
+      onPace = (d.strokes && d.strokes.length > 0) || Object.keys(d.fields || {}).length > 0 || Object.keys(d.checks || {}).length > 0;
+    }
+    sideDay.innerHTML = `Day ${doy} of 365${onPace ? ' · <b>On pace</b>' : ''}`;
+  }
+
+  // ---------- Search (typed entries + text boxes in this journal) ----------
+  function openSearch() {
+    $('#searchModal').classList.remove('hidden');
+    $('#searchInput').value = '';
+    $('#searchResults').innerHTML = '';
+    $('#searchInput').focus();
+  }
+  function runSearch(qRaw) {
+    const res = $('#searchResults');
+    res.innerHTML = '';
+    const q = qRaw.trim().toLowerCase();
+    if (q.length < 2 || !state.journal) return;
+    flushSave();
+    const hits = [];
+    state.journal.pages.forEach((p, i) => {
+      const d = LJStore.loadPageData(p.id);
+      const chunks = [];
+      Object.values(d.fields || {}).forEach((v) => { if (v) chunks.push(String(v)); });
+      (d.texts || []).forEach((t) => { if (t.text) chunks.push(t.text); });
+      for (const c of chunks) {
+        const pos = c.toLowerCase().indexOf(q);
+        if (pos >= 0) {
+          hits.push({ i, label: pageLabel(p, i), snip: c.slice(Math.max(0, pos - 30), pos + 70) });
+          break;
+        }
+      }
+    });
+    hits.slice(0, 40).forEach((h) => {
+      const b = el('button', 'search-hit',
+        `<div class="sh-label">${escapeHtml(h.label)}</div><div class="sh-snip">…${escapeHtml(h.snip)}…</div>`);
+      b.onclick = () => { $('#searchModal').classList.add('hidden'); loadPage(h.i); };
+      res.appendChild(b);
+    });
+    if (!hits.length) res.innerHTML = '<p class="sync-note">No matches in this journal.</p>';
+  }
+
   // ---------- Calendar links ----------
   function renderLinkLayer() {
     const layer = $('#linkLayer');
@@ -683,6 +766,7 @@
         recordChange();
         saveCurrentDebounced();
         renderFieldLayer();   // apply/remove strikethrough on the matching field
+        renderSideChips();
       };
       layer.appendChild(b);
     });
@@ -995,6 +1079,28 @@
     $('#dockHome').onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
     $('#dockTheme').onclick = toggleTheme;
     $('#themeBtn').onclick = toggleTheme;
+
+    // Desktop sidebar + overflow tools + search
+    $('#navToday').onclick = jumpToToday;
+    $('#navCalendar').onclick = () => {
+      const p = currentPage();
+      const m = p && p.month != null ? p.month
+        : (p && p.date && window.LJPlanner ? LJPlanner.parseISO(p.date).m : new Date().getMonth());
+      goToMonth(m);
+    };
+    $('#navJournals').onclick = backToLibrary;
+    $('#navSearch').onclick = openSearch;
+    $('#searchClose').onclick = () => $('#searchModal').classList.add('hidden');
+    $('#searchInput').addEventListener('input', () => runSearch($('#searchInput').value));
+    $('#moreBtn').onclick = () => {
+      const open = !$('#moreMenu').classList.contains('hidden');
+      $('#moreMenu').classList.toggle('hidden', open);
+      $('#moreBtn').classList.toggle('toggled', !open);
+    };
+    $('#stage').addEventListener('pointerdown', () => {
+      $('#moreMenu').classList.add('hidden');
+      $('#moreBtn').classList.remove('toggled');
+    });
     $('#photoInput').onchange = (e) => {
       const f = e.target.files && e.target.files[0];
       e.target.value = '';

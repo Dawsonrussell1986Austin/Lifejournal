@@ -47,52 +47,88 @@
 
   <!-- Editor -->
   <section id="editor" class="screen hidden">
-    <div class="toolbar">
-      <div class="tb-group">
-        <button id="backBtn" class="tb-btn" title="Library">‹ Library</button>
-        <span class="divider"></span>
-        <button id="prevPageBtn" class="tb-btn" title="Previous page">‹</button>
-        <button id="pageCountBtn" class="tb-btn page-count" title="All pages">1 / 1</button>
-        <button id="nextPageBtn" class="tb-btn" title="Next page">›</button>
-        <button id="todayBtn" class="tb-btn today-btn" title="Jump to today" style="display:none">Today</button>
+    <aside class="side">
+      <div class="brand side-brand">
+        <h1>Life<em>Journal</em></h1>
+        <span class="brand-digital">Digital</span>
       </div>
+      <div class="side-title" id="editorTitle">Journal</div>
+      <nav class="side-nav">
+        <button id="navToday" class="side-link">Today</button>
+        <button id="navCalendar" class="side-link">Calendar</button>
+        <button id="navJournals" class="side-link">Journals</button>
+        <button id="navSearch" class="side-link">Search</button>
+      </nav>
+      <div class="side-foot">
+        <div class="side-label">Five Foundations</div>
+        <div id="sideChips" class="side-chips"></div>
+        <div id="sideDay" class="side-day"></div>
+      </div>
+    </aside>
 
-      <div class="tb-title" id="editorTitle">Journal</div>
-
-      <div class="tb-group tools">
-        <button id="typeModeBtn" class="tb-btn mode-btn" title="Type into the page's slots">⌨︎ Type</button>
-        <button id="paperBtn" class="tb-btn mode-btn" title="Choose paper">▤ Paper</button>
-        <button id="themeBtn" class="tb-btn mode-btn" title="Switch theme">◐</button>
-        <span class="divider"></span>
-        <div class="pen-tools">
-          <button class="tb-btn tool active" data-tool="pen" title="Pen">✎</button>
-          <button class="tb-btn tool" data-tool="marker" title="Highlighter">▭</button>
-          <button class="tb-btn tool" data-tool="text" title="Type text">T</button>
-          <button class="tb-btn tool" data-tool="eraser" title="Eraser">⌫</button>
+    <div class="editor-main">
+      <div class="toolbar">
+        <button id="backBtn" class="tb-btn" title="Library">⌂</button>
+        <div class="tb-group">
+          <button id="prevPageBtn" class="tb-btn" title="Previous page">‹</button>
+          <button id="pageCountBtn" class="tb-btn page-count" title="All pages">1 / 1</button>
+          <button id="nextPageBtn" class="tb-btn" title="Next page">›</button>
         </div>
+        <button id="todayBtn" class="tb-btn today-btn" title="Jump to today" style="display:none">Today</button>
+        <span class="divider"></span>
+        <button class="tb-btn tool active pen-pill" data-tool="pen" title="Pen">✎ Pen</button>
+        <button id="typeModeBtn" class="tb-btn mode-btn" title="Type into the page's slots">T</button>
         <div class="swatches" id="swatches"></div>
-        <input id="widthRange" class="width-range" type="range" min="1" max="14" value="3" title="Stroke width" />
         <span class="divider"></span>
         <button id="undoBtn" class="tb-btn" title="Undo">↶</button>
-        <button id="pencilOnlyBtn" class="tb-btn" title="Toggle finger drawing">✋</button>
-        <button id="addPageBtn" class="tb-btn" title="Add page">＋▢</button>
-        <button id="exportBtn" class="tb-btn" title="Export PDF">⤓ PDF</button>
-        <button id="deletePageBtn" class="tb-btn danger" title="Delete page">🗑</button>
+        <button id="moreBtn" class="tb-btn" title="More tools">⋯</button>
+        <button id="exportBtn" class="tb-btn" title="Export PDF">PDF</button>
       </div>
-    </div>
 
-    <div class="canvas-stage" id="stage">
-      <div class="page-wrap" id="pageWrap">
-        <canvas id="bgCanvas"></canvas>
-        <div id="typeLayer" class="type-layer" spellcheck="false" data-placeholder="Tap and type your note…"></div>
-        <canvas id="inkCanvas"></canvas>
-        <div id="photoLayer" class="photo-layer"></div>
-        <div id="linkLayer" class="link-layer"></div>
-        <div id="interactiveLayer" class="interactive-layer"></div>
-        <div id="textLayer" class="text-layer"></div>
+      <div id="moreMenu" class="more-menu hidden">
+        <div class="mm-row">
+          <button class="tb-btn tool" data-tool="marker" title="Highlighter">▭ Marker</button>
+          <button class="tb-btn tool" data-tool="text" title="Free text box">T Text box</button>
+          <button class="tb-btn tool" data-tool="eraser" title="Eraser">⌫ Eraser</button>
+        </div>
+        <div class="mm-row">
+          <label class="mm-label">Width</label>
+          <input id="widthRange" class="width-range" type="range" min="1" max="14" value="3" title="Stroke width" />
+          <button id="pencilOnlyBtn" class="tb-btn" title="Toggle finger drawing">✋ Palm</button>
+        </div>
+        <div class="mm-row">
+          <button id="paperBtn" class="tb-btn mode-btn" title="Choose paper">▤ Paper</button>
+          <button id="themeBtn" class="tb-btn mode-btn" title="Switch theme">◐ Theme</button>
+          <button id="addPageBtn" class="tb-btn" title="Add page">＋ Page</button>
+          <button id="deletePageBtn" class="tb-btn danger" title="Delete page">🗑 Delete</button>
+        </div>
+      </div>
+
+      <div class="canvas-stage" id="stage">
+        <div class="page-wrap" id="pageWrap">
+          <canvas id="bgCanvas"></canvas>
+          <div id="typeLayer" class="type-layer" spellcheck="false" data-placeholder="Tap and type your note…"></div>
+          <canvas id="inkCanvas"></canvas>
+          <div id="photoLayer" class="photo-layer"></div>
+          <div id="linkLayer" class="link-layer"></div>
+          <div id="interactiveLayer" class="interactive-layer"></div>
+          <div id="textLayer" class="text-layer"></div>
+        </div>
       </div>
     </div>
   </section>
+
+  <!-- Search modal -->
+  <div id="searchModal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2>Search</h2>
+        <button id="searchClose" class="btn">Close</button>
+      </div>
+      <input id="searchInput" class="text-input" type="text" placeholder="Search typed entries in this journal…" autocomplete="off" />
+      <div id="searchResults" class="search-results"></div>
+    </div>
+  </div>
 
   <!-- New journal modal -->
   <div id="newJournalModal" class="modal hidden">
