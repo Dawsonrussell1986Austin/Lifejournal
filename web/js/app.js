@@ -213,6 +213,7 @@
     renderPhotoLayer();
     renderInteractiveLayer();
     renderSideChips();
+    renderMobileDay();
     if (window.LJPlanner) {
       $('#navToday').classList.toggle('active', !!page.date && page.date === LJPlanner.todayISO());
       $('#navCalendar').classList.toggle('active', page.template === 'planMonth');
@@ -673,6 +674,159 @@
     sideDay.innerHTML = `Day ${doy} of 365${onPace ? ' · <b>On pace</b>' : ''}`;
   }
 
+  // ---------- Phone-native daily view ----------
+  const MOB_HOURS = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22];
+  const mobHourLabel = (h) => (h < 12 ? h + 'a' : h === 12 ? '12p' : (h - 12) + 'p');
+  function isPhone() { return window.matchMedia('(max-width: 640px)').matches; }
+  function mobileEligible() {
+    const p = state.journal && currentPage();
+    return isPhone() && p && (p.template === 'planDay' || p.template === 'foundationsDaily');
+  }
+
+  function mobField(id, cls, placeholder) {
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.className = 'm-input' + (cls ? ' ' + cls : '');
+    inp.placeholder = placeholder || '';
+    inp.value = state.fields[id] || '';
+    inp.addEventListener('input', () => {
+      state.fields[id] = inp.value;
+      recordChange('field:' + id);
+      saveCurrentDebounced();
+    });
+    return inp;
+  }
+
+  function renderMobileDay() {
+    const wrap = $('#mobileDay');
+    if (!wrap) return;
+    const phone = isPhone();
+    const show = mobileEligible() && !state.forceCanvas;
+    $('#mobileTabs').classList.toggle('hidden', !phone || !state.journal);
+    wrap.classList.toggle('hidden', !show);
+    $('#stage').classList.toggle('hidden', !!show);
+    document.querySelector('#editor .toolbar').classList.toggle('hidden', !!show);
+    $('#moreMenu').classList.add('hidden');
+    if (!show) return;
+
+    const page = currentPage();
+    wrap.innerHTML = '';
+
+    // top bar: back · wordmark · count · pencil (canvas view)
+    const bar = el('div', 'm-bar');
+    const back = el('button', 'm-back', '‹');
+    back.onclick = backToLibrary;
+    bar.appendChild(back);
+    bar.appendChild(el('div', 'm-word', 'Life<em>Journal</em>'));
+    const right = el('div', 'm-bar-right');
+    right.appendChild(el('span', 'm-count', (state.pageIndex + 1) + '/' + state.journal.pages.length));
+    const pen = el('button', 'm-pen', '✎');
+    pen.title = 'Open the full page to write by hand';
+    pen.onclick = () => { state.forceCanvas = true; renderMobileDay(); requestAnimationFrame(relayout); };
+    right.appendChild(pen);
+    bar.appendChild(right);
+    wrap.appendChild(bar);
+
+    // date header
+    let parts = null;
+    if (page.date && window.LJPlanner) parts = LJPlanner.partsFor(page.date);
+    const doy = parts ? Math.floor((Date.UTC(parts.year, parts.month, parts.day) - Date.UTC(parts.year, 0, 0)) / 86400000) : dayOfYear(new Date());
+    wrap.appendChild(el('div', 'm-kicker', parts ? `Day ${doy} · ${parts.weekdayName}` : 'Daily page'));
+    wrap.appendChild(el('h1', 'm-date', parts ? parts.long : 'Foundations Daily'));
+
+    // thankful banner
+    const banner = el('div', 'm-banner');
+    banner.appendChild(el('div', 'm-label m-label-red', 'Thankful for'));
+    banner.appendChild(mobField('th0', 'm-serif', 'What are you thankful for?'));
+    wrap.appendChild(banner);
+
+    // top 3 card
+    const top = el('div', 'm-card');
+    top.appendChild(el('div', 'm-label', 'Top 3'));
+    for (let i = 0; i < 3; i++) {
+      const id = 'top' + i;
+      const row = el('div', 'm-row');
+      const chk = el('button', 'm-check' + (state.checks[id] ? ' on' : ''));
+      chk.onclick = () => {
+        if (state.checks[id]) delete state.checks[id]; else state.checks[id] = true;
+        recordChange(); saveCurrentDebounced(); renderMobileDay(); renderSideChips();
+      };
+      row.appendChild(chk);
+      const f = mobField(id, 'm-serif' + (state.checks[id] ? ' m-done' : ''), i === 0 ? 'Must be done today' : '');
+      row.appendChild(f);
+      top.appendChild(row);
+    }
+    wrap.appendChild(top);
+
+    // foundations chips
+    const chips = el('div', 'm-chips');
+    SIDE_FND.forEach((lab, i) => {
+      const id = 'fnd' + i;
+      const c = el('button', 'm-chip' + (state.checks[id] ? ' on' : ''), lab);
+      c.onclick = () => {
+        if (state.checks[id]) delete state.checks[id]; else state.checks[id] = true;
+        recordChange(); saveCurrentDebounced(); renderMobileDay(); renderSideChips();
+      };
+      chips.appendChild(c);
+    });
+    wrap.appendChild(chips);
+
+    // schedule card — condensed: filled hours + the current hour; expandable
+    const sched = el('div', 'm-card');
+    const shead = el('div', 'm-label m-sched-head', 'Schedule · 5 am – 10 pm');
+    const expand = el('button', 'm-expand', state.mobAllHours ? 'Filled only' : 'All hours');
+    expand.onclick = () => { state.mobAllHours = !state.mobAllHours; renderMobileDay(); };
+    shead.appendChild(expand);
+    sched.appendChild(shead);
+    const isToday = page.date && window.LJPlanner && page.date === LJPlanner.todayISO();
+    const nowH = new Date().getHours();
+    let any = false;
+    MOB_HOURS.forEach((h, i) => {
+      const id = 'sch' + i;
+      const isNow = isToday && h === nowH;
+      if (!state.mobAllHours && !state.fields[id] && !isNow) return;
+      any = true;
+      const row = el('div', 'm-row m-sched-row' + (isNow ? ' m-now' : ''));
+      row.appendChild(el('span', 'm-hour', mobHourLabel(h)));
+      row.appendChild(mobField(id, ''));
+      if (isNow) row.appendChild(el('span', 'm-now-lab', 'Now'));
+      sched.appendChild(row);
+    });
+    if (!any) sched.appendChild(el('p', 'm-empty', 'Nothing scheduled — tap “All hours” to plan the day.'));
+    wrap.appendChild(sched);
+
+    // scripture card
+    const sc = el('div', 'm-card m-scripture');
+    sc.appendChild(el('div', 'm-label m-label-green', 'Scripture'));
+    sc.appendChild(mobField('scr0', 'm-serif', 'Reference — e.g. John 15'));
+    sc.appendChild(mobField('scr1', 'm-serif', 'What did I read?'));
+    sc.appendChild(el('div', 'm-label m-label-green', 'Observe & apply'));
+    sc.appendChild(mobField('obs0', '', 'What did I learn?'));
+    sc.appendChild(mobField('obs1', ''));
+    sc.appendChild(el('div', 'm-label m-label-green', 'The gospel'));
+    sc.appendChild(mobField('gos0', '', 'How does this point to Christ?'));
+    wrap.appendChild(sc);
+
+    // journal card — one flowing textarea backed by the jrn line fields
+    const jr = el('div', 'm-card');
+    jr.appendChild(el('div', 'm-label', 'Journal / notes / prayer'));
+    const ta = document.createElement('textarea');
+    ta.className = 'm-textarea m-serif';
+    ta.rows = 6;
+    ta.placeholder = 'Write freely…';
+    const jrnLines = [];
+    for (let i = 0; i < 12; i++) jrnLines.push(state.fields['jrn' + i] || '');
+    ta.value = jrnLines.join('\n').replace(/\n+$/, '');
+    ta.addEventListener('input', () => {
+      const lines = ta.value.split('\n');
+      for (let i = 0; i < 12; i++) state.fields['jrn' + i] = lines[i] || '';
+      recordChange('field:jrn');
+      saveCurrentDebounced();
+    });
+    jr.appendChild(ta);
+    wrap.appendChild(jr);
+  }
+
   // ---------- Search (typed entries + text boxes in this journal) ----------
   function openSearch() {
     $('#searchModal').classList.remove('hidden');
@@ -1115,6 +1269,26 @@
       $('#moreMenu').classList.add('hidden');
       $('#moreBtn').classList.remove('toggled');
     });
+
+    // Phone tabs + card-view toggle
+    document.querySelectorAll('#mobileTabs button').forEach((b) => {
+      b.onclick = () => {
+        const k = b.dataset.mt;
+        document.querySelectorAll('#mobileTabs button').forEach((x) => x.classList.toggle('active', x === b));
+        if (k === 'today') { state.forceCanvas = false; jumpToToday(); }
+        else if (k === 'calendar') {
+          state.forceCanvas = false;
+          const p = currentPage();
+          const m = p && p.month != null ? p.month
+            : (p && p.date && window.LJPlanner ? LJPlanner.parseISO(p.date).m : new Date().getMonth());
+          goToMonth(m);
+        }
+        else if (k === 'journals') backToLibrary();
+        else if (k === 'search') openSearch();
+      };
+    });
+    $('#dayViewBtn').onclick = () => { state.forceCanvas = false; renderMobileDay(); };
+    window.addEventListener('resize', renderMobileDay);
     $('#photoInput').onchange = (e) => {
       const f = e.target.files && e.target.files[0];
       e.target.value = '';

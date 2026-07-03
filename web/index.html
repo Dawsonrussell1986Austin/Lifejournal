@@ -80,6 +80,7 @@
         <button id="typeModeBtn" class="tb-btn mode-btn" title="Type into the page's slots">T</button>
         <div class="swatches" id="swatches"></div>
         <span class="divider"></span>
+        <button id="dayViewBtn" class="tb-btn phone-only" title="Back to card view">▦</button>
         <button id="undoBtn" class="tb-btn" title="Undo">↶</button>
         <button id="moreBtn" class="tb-btn" title="More tools">⋯</button>
         <button id="exportBtn" class="tb-btn" title="Export PDF">PDF</button>
@@ -115,6 +116,17 @@
           <div id="textLayer" class="text-layer"></div>
         </div>
       </div>
+
+      <!-- Phone-native daily view (shown on small screens for daily pages) -->
+      <div id="mobileDay" class="mobile-day hidden"></div>
+
+      <!-- Phone bottom tabs -->
+      <nav id="mobileTabs" class="mobile-tabs hidden">
+        <button data-mt="today"><i>☀</i><span>Today</span></button>
+        <button data-mt="calendar"><i>▦</i><span>Calendar</span></button>
+        <button data-mt="journals"><i>▤</i><span>Journals</span></button>
+        <button data-mt="search"><i>⌕</i><span>Search</span></button>
+      </nav>
     </div>
   </section>
 
