@@ -93,6 +93,12 @@ window.LJBible = (function () {
   //   "John 3:16-" -> end-of-range verses 17..36
   function suggest(input) {
     const raw = String(input || '');
+    // Empty field: browse the whole canon.
+    if (!raw.trim()) {
+      return BOOKS.map(function (b) {
+        return { label: b[0], value: b[0] + ' ', kind: 'book' };
+      });
+    }
     const m = raw.match(/^\s*((?:[123]\s+)?[A-Za-z][A-Za-z .]*?)\s*(\d+)?\s*(?:(:)\s*(\d+)?\s*(?:(-)\s*(\d+)?)?)?$/);
     if (!m) return [];
     const bookPart = m[1], chDigits = m[2], colon = m[3], vDigits = m[4], dash = m[5], v2Digits = m[6];
@@ -100,7 +106,7 @@ window.LJBible = (function () {
 
     // Book stage: no exact book yet.
     if (!book) {
-      return bookMatches(bookPart).slice(0, 8).map(function (b) {
+      return bookMatches(bookPart).slice(0, 10).map(function (b) {
         return { label: b[0], value: b[0] + ' ', kind: 'book' };
       });
     }
@@ -110,7 +116,7 @@ window.LJBible = (function () {
     if (!colon) {
       const pre = chDigits || '';
       const out = [];
-      for (let c = 1; c <= chapters.length && out.length < 10; c++) {
+      for (let c = 1; c <= chapters.length; c++) {
         if (String(c).startsWith(pre)) {
           out.push({ label: book[0] + ' ' + c + '  ·  ' + chapters[c - 1] + ' verses', value: book[0] + ' ' + c + ':', kind: 'chapter' });
         }
@@ -127,7 +133,7 @@ window.LJBible = (function () {
       const startV = parseInt(vDigits, 10) || 1;
       const pre = v2Digits || '';
       const out = [];
-      for (let v = startV + 1; v <= maxV && out.length < 10; v++) {
+      for (let v = startV + 1; v <= maxV && out.length < 40; v++) {
         if (String(v).startsWith(pre)) {
           const val = book[0] + ' ' + ch + ':' + startV + '-' + v;
           out.push({ label: val, value: val, kind: 'verse', done: true });
@@ -136,10 +142,13 @@ window.LJBible = (function () {
       return out;
     }
 
-    // Verse stage.
+    // Verse stage — "whole chapter" first, then individual verses.
     const pre = vDigits || '';
     const out = [];
-    for (let v = 1; v <= maxV && out.length < 10; v++) {
+    if (!pre) {
+      out.push({ label: 'Whole chapter — ' + book[0] + ' ' + ch, value: book[0] + ' ' + ch, kind: 'whole', done: true });
+    }
+    for (let v = 1; v <= maxV; v++) {
       if (String(v).startsWith(pre)) {
         const val = book[0] + ' ' + ch + ':' + v;
         out.push({ label: val, value: val, kind: 'verse', done: true });
@@ -148,5 +157,23 @@ window.LJBible = (function () {
     return out;
   }
 
-  return { BOOKS: BOOKS, suggest: suggest, findBook: findBook };
+  // Parse a complete-enough reference ("John 3", "John 3:16", "John 3:16-18").
+  // Returns { ref, book, chapter, verse, verse2 } or null.
+  function parseRef(input) {
+    const raw = String(input || '').trim();
+    const m = raw.match(/^\s*((?:[123]\s+)?[A-Za-z][A-Za-z .]*?)\s*(\d+)?\s*(?::\s*(\d+)\s*(?:-\s*(\d+))?)?\s*$/);
+    if (!m) return null;
+    const book = findBook(m[1]);
+    if (!book) return null;
+    const ch = m[2] ? parseInt(m[2], 10) : null;
+    if (!ch || ch < 1 || ch > book[1].length) return null;
+    const v = m[3] ? parseInt(m[3], 10) : null;
+    const v2 = m[4] ? parseInt(m[4], 10) : null;
+    if (v && (v < 1 || v > book[1][ch - 1])) return null;
+    let ref = book[0] + ' ' + ch;
+    if (v) ref += ':' + v + (v2 ? '-' + v2 : '');
+    return { ref, book: book[0], chapter: ch, verse: v, verse2: v2 };
+  }
+
+  return { BOOKS: BOOKS, suggest: suggest, findBook: findBook, parseRef: parseRef };
 })();

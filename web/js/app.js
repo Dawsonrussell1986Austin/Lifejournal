@@ -329,7 +329,7 @@
       inp.dataset.idx = idx;
       const size = f.size || 26;
       const fs = (size * 0.86 - 2) * s;   // 2pt smaller than the writing line height
-      if (f.serif) { inp.style.fontFamily = 'Georgia, serif'; inp.style.fontStyle = f.italic ? 'italic' : 'normal'; }
+      if (f.serif) inp.style.fontFamily = 'Georgia, serif';
       // completed Top-3 items read as done: struck through and muted
       if (state.checks[f.id]) { inp.style.textDecoration = 'line-through'; inp.style.opacity = '.55'; }
       inp.style.left = (f.x * s) + 'px';
@@ -674,6 +674,42 @@
     sideDay.innerHTML = `Day ${doy} of 365${onPace ? ' · <b>On pace</b>' : ''}`;
   }
 
+  // ---------- AI Bible study ----------
+  // Tiny markdown renderer for the study text (### headers, **bold**, paragraphs).
+  function mdLite(text) {
+    const esc = escapeHtml(String(text));
+    return esc.split(/\n{2,}/).map((block) => {
+      const b = block.trim();
+      if (!b) return '';
+      if (b.startsWith('###')) return '<h3>' + b.replace(/^#+\s*/, '') + '</h3>';
+      return '<p>' + b.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>') + '</p>';
+    }).join('');
+  }
+  async function openStudy(ref, force) {
+    const parsed = window.LJBible && LJBible.parseRef(ref);
+    if (!parsed) { toast('Pick a passage first — e.g. John 3 or John 3:16'); return; }
+    const modal = $('#studyModal'), body = $('#studyBody');
+    $('#studyTitle').textContent = 'Bible Study · ' + parsed.ref;
+    modal.classList.remove('hidden');
+    const cacheKey = 'lifejournal.study.' + parsed.ref;
+    const cached = !force && LJKV.get(cacheKey);
+    if (cached) { body.innerHTML = mdLite(cached); return; }
+    body.innerHTML = '<p class="study-loading">Preparing a study on <b>' + escapeHtml(parsed.ref) + '</b> — cultural context, application, and the Gospel thread…</p>';
+    try {
+      const r = await fetch('/api/study', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reference: parsed.ref })
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || 'Something went wrong.');
+      LJKV.set(cacheKey, j.study);
+      body.innerHTML = mdLite(j.study);
+    } catch (e) {
+      body.innerHTML = '<p class="sync-note">' + escapeHtml(e.message) + '</p>';
+    }
+  }
+
   // ---------- Phone-native daily view ----------
   const MOB_HOURS = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22];
   const mobHourLabel = (h) => (h < 12 ? h + 'a' : h === 12 ? '12p' : (h - 12) + 'p');
@@ -798,7 +834,35 @@
     // scripture card
     const sc = el('div', 'm-card m-scripture');
     sc.appendChild(el('div', 'm-label m-label-green', 'Scripture'));
-    sc.appendChild(mobField('scr0', 'm-serif', 'Reference — e.g. John 15'));
+    const refInp = mobField('scr0', 'm-serif', 'Tap to pick a passage…');
+    sc.appendChild(refInp);
+    // book → chapter → verse dropdown (in-flow, scrolls inside the card)
+    const dd = el('div', 'm-suggest hidden');
+    const updateDD = () => {
+      const items = window.LJBible ? LJBible.suggest(refInp.value) : [];
+      dd.innerHTML = '';
+      if (!items.length || (items.length === 1 && items[0].value === refInp.value)) { dd.classList.add('hidden'); return; }
+      items.slice(0, 180).forEach((it) => {
+        const d = el('div', 'm-suggest-item', it.label);
+        d.addEventListener('pointerdown', (e) => {
+          e.preventDefault();
+          refInp.value = it.value;
+          state.fields.scr0 = it.value;
+          recordChange('field:scr0');
+          saveCurrentDebounced();
+          if (it.done) { dd.classList.add('hidden'); refInp.blur(); } else updateDD();
+        });
+        dd.appendChild(d);
+      });
+      dd.classList.remove('hidden');
+    };
+    refInp.addEventListener('focus', updateDD);
+    refInp.addEventListener('input', updateDD);
+    refInp.addEventListener('blur', () => setTimeout(() => dd.classList.add('hidden'), 200));
+    sc.appendChild(dd);
+    const studyBtn = el('button', 'm-study', '✦ Create Bible Study');
+    studyBtn.onclick = () => openStudy(state.fields.scr0 || '');
+    sc.appendChild(studyBtn);
     sc.appendChild(mobField('scr1', 'm-serif', 'What did I read?'));
     sc.appendChild(el('div', 'm-label m-label-green', 'Observe & apply'));
     sc.appendChild(mobField('obs0', '', 'What did I learn?'));
@@ -938,6 +1002,17 @@
       };
       layer.appendChild(b);
     });
+
+    // "Create Bible Study" on the scripture card of daily pages
+    if (page.template === 'planDay' || page.template === 'foundationsDaily') {
+      const L = LJTemplates.dailyLayout();
+      const btn = el('button', 'lj-study', '✦ Study');
+      btn.title = 'Create a Bible study for this passage';
+      btn.style.left = ((L.card.x + L.card.w - 96) * s) + 'px';
+      btn.style.top = ((L.card.y + 12) * s) + 'px';
+      btn.onclick = () => openStudy(state.fields.scr0 || '');
+      layer.appendChild(btn);
+    }
 
     const nm = LJTemplates.nowMarker(page);
     if (nm) {
@@ -1259,6 +1334,8 @@
     $('#navJournals').onclick = backToLibrary;
     $('#navSearch').onclick = openSearch;
     $('#searchClose').onclick = () => $('#searchModal').classList.add('hidden');
+    $('#studyClose').onclick = () => $('#studyModal').classList.add('hidden');
+    $('#studyRegen').onclick = () => openStudy(state.fields.scr0 || $('#studyTitle').textContent.replace('Bible Study · ', ''), true);
     $('#searchInput').addEventListener('input', () => runSearch($('#searchInput').value));
     $('#moreBtn').onclick = () => {
       const open = !$('#moreMenu').classList.contains('hidden');

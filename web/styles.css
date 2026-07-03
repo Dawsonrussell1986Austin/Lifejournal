@@ -479,7 +479,7 @@ body[data-theme="ink"] .m-scripture { background: #161f1a; border-color: rgba(90
   border-bottom: 1px solid var(--faint);
 }
 .m-input:focus { border-bottom-color: var(--accent); }
-.m-serif { font-family: var(--serif); font-style: italic; }
+.m-serif { font-family: var(--serif); }
 .m-done { text-decoration: line-through; opacity: .55; }
 .m-row { display: flex; align-items: center; gap: 10px; }
 .m-check {
@@ -509,6 +509,36 @@ body[data-theme="ink"] .m-scripture { background: #161f1a; border-color: rgba(90
   width: 100%; border: none; outline: none; background: transparent; resize: vertical;
   color: var(--ink); font-size: 16px; line-height: 1.6; min-height: 120px;
 }
+
+/* Mobile scripture dropdown + study button */
+.m-suggest { max-height: 250px; overflow-y: auto; border: 1px solid var(--card-line); border-radius: 12px; margin-top: 6px; background: var(--panel); }
+body[data-theme="ink"] .m-suggest { background: #12161e; }
+.m-suggest-item { padding: 10px 14px; font-size: 15px; color: var(--ink); cursor: pointer; border-bottom: 1px solid var(--faint); }
+.m-suggest-item:last-child { border-bottom: none; }
+.m-suggest-item:active { background: var(--hover); }
+.m-study {
+  margin-top: 12px; border: none; cursor: pointer; border-radius: 999px;
+  background: var(--accent); color: #fff; font-size: 13px; font-weight: 700;
+  padding: 10px 16px; align-self: flex-start;
+}
+.m-study:active { background: var(--accent-hover); }
+
+/* Desktop study button on the scripture card */
+.lj-study {
+  position: absolute; pointer-events: auto; cursor: pointer;
+  border: 1px solid var(--rule); background: var(--panel); color: var(--accent);
+  border-radius: 999px; padding: 5px 12px; font-size: 11.5px; font-weight: 700; letter-spacing: .5px;
+}
+.lj-study:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+body[data-theme="ink"] .lj-study { background: #161f1a; border-color: rgba(90,140,110,.4); color: #9fcdb0; }
+body[data-theme="ink"] .lj-study:hover { background: var(--accent); color: #fff; }
+
+/* Study modal body */
+.study-body { font-size: 15px; line-height: 1.65; color: var(--ink); }
+.study-body h3 { font-family: var(--serif); font-size: 17px; margin: 18px 0 6px; color: var(--accent); }
+.study-body h3:first-child { margin-top: 0; }
+.study-body p { margin: 0 0 10px; }
+.study-loading { color: var(--soft-ink); font-style: italic; }
 
 /* Phone bottom tabs */
 .mobile-tabs {

@@ -415,17 +415,17 @@ window.LJTemplates = (function () {
   }
   function dailyFields() {
     const L = dailyLayout(), f = [];
-    f.push({ id: 'th0', x: M, y: L.thankY, w: L.thankW, size: 26, serif: true, italic: true });
+    f.push({ id: 'th0', x: M, y: L.thankY, w: L.thankW, size: 26 });
     SCHED_HOURS.forEach((h, i) => {
       const col = L.schedCols[i < L.schedPerCol ? 0 : 1];
       const y = L.schedTop + (i % L.schedPerCol) * L.schedRowH;
       f.push({ id: 'sch' + i, x: col.x, y, w: col.w, size: 21, serif: true });
     });
     for (let i = 0; i < 3; i++) f.push({ id: 'top' + i, x: L.rx + 34, y: L.top3Y + i * L.top3Gap, w: L.rw - 34, size: 21, serif: true });
-    L.scr.d.forEach((y, i) => f.push({ id: 'scr' + i, x: L.rx, y, w: L.rw, size: 20, serif: true, italic: true, bible: i === 0 }));
+    L.scr.d.forEach((y, i) => f.push({ id: 'scr' + i, x: L.rx, y, w: L.rw, size: 20, bible: i === 0 }));
     L.obs.d.forEach((y, i) => f.push({ id: 'obs' + i, x: L.rx, y, w: L.rw, size: 20, serif: true }));
     L.gos.d.forEach((y, i) => f.push({ id: 'gos' + i, x: L.rx, y, w: L.rw, size: 20, serif: true }));
-    for (let i = 0; i < L.jrnRows; i++) f.push({ id: 'jrn' + i, x: M, y: L.jrnTop + i * L.jrnGap, w: L.leftW, size: 22, serif: true, italic: true });
+    for (let i = 0; i < L.jrnRows; i++) f.push({ id: 'jrn' + i, x: M, y: L.jrnTop + i * L.jrnGap, w: L.leftW, size: 22 });
     return f;
   }
   function daySection(ctx, title, prompt, x, y, color) {
@@ -895,5 +895,5 @@ window.LJTemplates = (function () {
     ctx.restore();
   }
 
-  return { draw, checkRects, nowMarker, fieldRects, dailyWeekdayRects };
+  return { draw, checkRects, nowMarker, fieldRects, dailyWeekdayRects, dailyLayout };
 })();

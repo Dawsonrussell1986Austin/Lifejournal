@@ -289,11 +289,10 @@ window.JournalCanvas = (function () {
       let fs = (f.size || 26) * 0.86 - 2;
       const str = String(v), maxW = f.w - 4;
       const fam = f.serif ? 'Georgia, serif' : SANS;
-      const style = (f.serif && f.italic) ? 'italic ' : '';
-      ctx.font = `${style}400 ${fs}px ${fam}`;
+      ctx.font = `400 ${fs}px ${fam}`;
       while (fs > 9 && ctx.measureText(str).width > maxW) {
         fs -= 1;
-        ctx.font = `${style}400 ${fs}px ${fam}`;
+        ctx.font = `400 ${fs}px ${fam}`;
       }
       ctx.fillText(str, f.x + 2, f.y - 5, maxW);
     }
