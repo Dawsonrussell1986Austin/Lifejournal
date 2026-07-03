@@ -32,11 +32,11 @@ window.JournalCanvas = (function () {
     setWidth(w) { this.baseWidth = w; }
     setPencilOnly(v) { this.pencilOnly = v; }
 
-    // Fit the page to the available stage size, sizing both canvases for the
-    // device pixel ratio so ink and template stay sharp.
+    // Fit the page to the stage WIDTH (GoodNotes-style): the sheet fills the
+    // editor horizontally and scrolls vertically, capped so huge monitors
+    // don't blow the page up past comfortable reading size.
     layout(stageW, stageH) {
-      const pad = 0;
-      const scale = Math.min((stageW - pad) / PAGE.W, (stageH - pad) / PAGE.H);
+      const scale = Math.min(stageW / PAGE.W, 1180 / PAGE.W);
       const cssW = Math.max(1, Math.floor(PAGE.W * scale));
       const cssH = Math.max(1, Math.floor(PAGE.H * scale));
       this.scaleFactor = cssW / PAGE.W; // CSS px per page unit (for the text layer)
