@@ -48,7 +48,8 @@ body[data-theme="ink"] {
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body {
+html { margin: 0; height: 100%; background: none; overscroll-behavior: none; }
+body {
   margin: 0; height: 100%;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   color: var(--ink);
@@ -84,8 +85,21 @@ html, body {
   font-size: 10px; font-weight: 700; letter-spacing: 3px; color: var(--soft-ink);
   text-transform: uppercase; align-self: center;
 }
-.header-actions { display: none; }
+.header-actions { display: flex; align-items: center; gap: 10px; }
+.header-actions #syncBtn { display: none; }   /* sync lives in the dock */
 .lib-foot { display: none; }
+
+/* The library floats as one rounded panel on the page background. */
+#library {
+  position: relative; margin: 16px; height: calc(100dvh - 32px);
+  border-radius: 26px; background: var(--panel);
+  box-shadow: 0 20px 55px rgba(26, 24, 18, 0.10);
+  overflow: hidden;
+}
+body[data-theme="ink"] #library {
+  box-shadow: 0 20px 55px rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--card-line);
+}
 
 .lib-greet { padding: 26px 34px 4px; }
 .lib-greet h1 {
@@ -103,7 +117,7 @@ html, body {
   gap: 26px; padding: 26px 34px 150px;
 }
 
-/* Book-cover journal cards */
+/* Book-cover journal cards (Quiet Paper) / glass cards (Ink & Glass) */
 .journal-tile { cursor: pointer; }
 .jcard {
   --c1: #4a5f50; --c2: #607967;
@@ -111,48 +125,64 @@ html, body {
   border-radius: 6px 14px 14px 6px; padding: 20px 18px 16px;
   aspect-ratio: 3 / 4; min-height: 210px;
   display: flex; flex-direction: column; gap: 4px;
-  background: linear-gradient(135deg, var(--c1), var(--c2));
+  background: linear-gradient(160deg, var(--c1), var(--c2));
   box-shadow: 0 16px 34px rgba(15, 17, 22, 0.28), inset 4px 0 8px rgba(0, 0, 0, 0.22);
   transition: transform .16s ease, box-shadow .16s ease;
 }
 .journal-tile:hover .jcard { transform: translateY(-5px); box-shadow: 0 22px 44px rgba(15, 17, 22, 0.36), inset 4px 0 8px rgba(0, 0, 0, 0.22); }
-.jcard-band { position: absolute; top: 0; bottom: 0; right: 15%; width: 12px; background: var(--band, transparent); box-shadow: 0 0 6px rgba(0,0,0,.25); }
+.jcard-band { position: absolute; top: 0; bottom: 0; right: 10%; width: 11px; background: var(--band, transparent); box-shadow: 0 0 6px rgba(0,0,0,.25); }
 .jcard-top { display: flex; align-items: flex-start; justify-content: space-between; }
-.jcard-icon {
-  width: auto; height: auto; border-radius: 0; background: none !important; box-shadow: none;
-  color: rgba(255, 255, 255, 0.85); font-size: 18px; display: block;
+.jcard-cross { color: rgba(255, 255, 255, 0.8); font-size: 16px; }
+.jcard-mono {
+  display: none; width: 40px; height: 40px; border-radius: 11px;
+  background: rgba(90, 140, 110, 0.16); border: 1px solid rgba(90, 140, 110, 0.35);
+  color: #9fcdb0; font-family: var(--serif); font-size: 16px;
+  align-items: center; justify-content: center;
 }
+.jcard-mono em { font-style: italic; color: var(--red); }
 .jcard-del { border: none; background: none; cursor: pointer; font-size: 14px; opacity: 0; color: #fff; padding: 4px; transition: opacity .15s ease; }
 .journal-tile:hover .jcard-del { opacity: .75; }
 .jcard-del:hover { opacity: 1 !important; }
-.jcard-chip {
-  align-self: flex-start; font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.75); background: rgba(0, 0, 0, 0.18);
-  padding: 3px 10px; border-radius: 999px; margin-top: 8px;
-}
 .jcard-title {
   font-family: var(--serif); font-weight: 600; font-size: 20px; line-height: 1.25;
   margin-top: auto; color: #fff; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 .jcard-count { font-size: 12px; color: rgba(255, 255, 255, 0.72); }
-.new-card {
-  background: transparent; border: 1.5px dashed var(--rule); box-shadow: none;
-  align-items: center; justify-content: center; text-align: center; gap: 10px;
+.jcard-progress { display: none; margin-top: 10px; }
+.jcard-progress .bar { height: 3px; border-radius: 2px; background: rgba(255,255,255,.12); overflow: hidden; }
+.jcard-progress .bar i { display: block; height: 100%; width: var(--prog, 0%); background: var(--red); border-radius: 2px; }
+
+/* Ink & Glass: cards become dark glass panels with an LJ monogram */
+body[data-theme="ink"] .jcard {
+  background: linear-gradient(170deg, #171e29, #131822);
+  border: 1px solid #232b38; border-radius: 16px;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.35);
 }
-.journal-tile:hover .new-card { box-shadow: none; }
+body[data-theme="ink"] .journal-tile:hover .jcard { box-shadow: 0 20px 42px rgba(0, 0, 0, 0.5); }
+body[data-theme="ink"] .jcard-cross { display: none; }
+body[data-theme="ink"] .jcard-mono { display: flex; }
+body[data-theme="ink"] .jcard-title { text-shadow: none; }
+body[data-theme="ink"] .jcard-count { color: var(--soft-ink); }
+body[data-theme="ink"] .jcard-progress { display: block; }
+body[data-theme="ink"] .jcard-band { width: 6px; right: 12%; }
+
+.new-card {
+  background: transparent !important; border: 1.5px dashed var(--rule); box-shadow: none !important;
+  align-items: center; justify-content: center; text-align: center; gap: 10px;
+  border-radius: 16px;
+}
 .new-card .jcard-title { color: var(--soft-ink); font-size: 15px; font-weight: 500; margin-top: 0; text-shadow: none; }
-.new-card .jcard-count { color: var(--soft-ink); opacity: .8; }
 .plus-icon {
-  width: 52px !important; height: 52px !important; border-radius: 50% !important;
-  background: var(--panel-2) !important; color: var(--soft-ink) !important;
-  display: flex !important; align-items: center; justify-content: center; font-size: 24px;
+  width: 52px; height: 52px; border-radius: 50%;
+  background: var(--panel-2); color: var(--soft-ink);
+  display: flex; align-items: center; justify-content: center; font-size: 24px;
 }
 
 .shelf-foot {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
-  display: flex; justify-content: space-between; padding: 14px 34px 96px;
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 5;
+  display: flex; justify-content: space-between; padding: 40px 34px 18px;
   font-size: 12.5px; color: var(--soft-ink); pointer-events: none;
-  background: linear-gradient(transparent, var(--bg) 65%);
+  background: linear-gradient(transparent, var(--panel) 70%);
 }
 .shelf-foot b { color: var(--ink); font-weight: 600; }
 
@@ -177,9 +207,9 @@ body[data-theme="ink"] .dock { background: #1c2330; border: 1px solid #262e3c; }
 /* ---------- Editor ---------- */
 #editor { background: var(--stage); }
 .toolbar {
-  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
   background: #15171c; color: #fff; border-radius: 999px;
-  margin: 12px auto 4px; padding: 8px 18px; max-width: calc(100% - 24px);
+  margin: 12px auto 4px; padding: 7px 16px; max-width: calc(100% - 24px);
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28); width: fit-content;
 }
 body[data-theme="ink"] .toolbar { background: #1c2330; border: 1px solid #262e3c; }

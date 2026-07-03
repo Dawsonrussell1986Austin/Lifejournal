@@ -38,12 +38,19 @@
   }
   function renderGreeting() {
     const now = new Date();
-    const h = now.getHours();
-    const word = h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening';
-    $('#greeting').textContent = `Good ${word}.`;
-    const dateStr = now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
-    $('#greetSub').textContent = `${dateStr} · ${GREET_VERSES[dayOfYear(now) % GREET_VERSES.length]}`;
     const doy = dayOfYear(now);
+    const verse = GREET_VERSES[doy % GREET_VERSES.length];
+    const dateStr = now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+    if (state.theme === 'ink') {
+      // Ink & Glass leads with the date, like the mock.
+      $('#greeting').textContent = dateStr;
+      $('#greetSub').textContent = `Day ${doy} · ${verse}`;
+    } else {
+      const h = now.getHours();
+      const word = h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening';
+      $('#greeting').textContent = `Good ${word}.`;
+      $('#greetSub').textContent = `${dateStr} · ${verse}`;
+    }
     $('#shelfDay').innerHTML = `Day <b>${doy}</b> of ${(now.getFullYear() % 4 === 0) ? 366 : 365}`;
   }
 
@@ -52,22 +59,25 @@
     const shelf = $('#shelf');
     shelf.innerHTML = '';
 
+    const doy = dayOfYear(new Date());
     state.lib.journals.forEach((j) => {
       const cv = LJData.COVERS[j.cover] || LJData.COVERS.sage;
-      const chip = j.kind === 'planner' ? 'Calendar' : cv.name;
       const tile = el('div', 'journal-tile');
-      const count = j.kind === 'planner'
-        ? `${j.pages.length} pages · Day ${dayOfYear(new Date())}`
+      const isPlanner = j.kind === 'planner';
+      const count = isPlanner
+        ? `${j.pages.length} pages · Day ${doy}`
         : `${j.pages.length} page${j.pages.length === 1 ? '' : 's'}`;
-      tile.innerHTML = `<div class="jcard" style="--c1:${cv.c1};--c2:${cv.c2 || cv.c1};--band:${cv.band || 'transparent'}">
-          ${j.kind === 'planner' ? '<div class="jcard-band"></div>' : ''}
+      const prog = Math.min(100, Math.round(doy / 365 * 100));
+      tile.innerHTML = `<div class="jcard" style="--c1:${cv.c1};--c2:${cv.c2 || cv.c1};--band:${cv.band || 'transparent'};--prog:${prog}%">
+          ${isPlanner ? '<div class="jcard-band"></div>' : ''}
           <div class="jcard-top">
-            <div class="jcard-icon">✝</div>
+            <span class="jcard-cross">✝</span>
+            <span class="jcard-mono">L<em>J</em></span>
             <button class="jcard-del" title="Delete journal">🗑</button>
           </div>
-          <span class="jcard-chip">${chip}</span>
           <div class="jcard-title">${escapeHtml(j.title)}</div>
           <div class="jcard-count">${count}</div>
+          ${isPlanner ? '<div class="jcard-progress"><div class="bar"><i></i></div></div>' : ''}
         </div>`;
       tile.querySelector('.jcard-del').onclick = (e) => { e.stopPropagation(); deleteJournal(j.id); };
       tile.onclick = () => openJournal(j.id);
@@ -552,6 +562,7 @@
   }
   function toggleTheme() {
     applyTheme(state.theme === 'ink' ? 'paper' : 'ink');
+    if (!$('#library').classList.contains('hidden')) renderShelf();
     toast(state.theme === 'ink' ? 'Ink & Glass' : 'Quiet Paper');
   }
 
