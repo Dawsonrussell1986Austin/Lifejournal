@@ -318,6 +318,8 @@ body[data-theme="ink"] .toolbar { background: #1c2330; border: 1px solid #262e3c
 }
 .lj-link:hover { background: var(--hover); }
 .lj-link:active { background: var(--hover); }
+.lj-wd { border-radius: 50%; }
+.lj-wd:hover { background: var(--hover); box-shadow: 0 0 0 1px var(--rule) inset; }
 
 /* Type layer — fillable text fields anchored to the template's slots. */
 .type-layer { position: absolute; inset: 0; z-index: 1; pointer-events: none; }

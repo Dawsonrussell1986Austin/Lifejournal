@@ -473,12 +473,14 @@ window.LJTemplates = (function () {
     ctx.save(); ctx.textAlign = 'right';
     text(ctx, dateStr, W - M, M + 36, `600 22px ${SERIF}`, COLORS.ink);
     ctx.restore();
+    // Weekday strip: 30-unit pitch so the tap targets are generous and
+    // never overlap (see dailyWeekdayRects).
     const wd = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
     ctx.save(); ctx.textAlign = 'center';
     wd.forEach((d, i) => {
-      const x = W - M - 128 + i * 20, on = i === activeWd;
-      if (on) { ctx.fillStyle = COLORS.accent; ctx.beginPath(); ctx.arc(x, M + 62, 9, 0, Math.PI * 2); ctx.fill(); }
-      text(ctx, d, x, M + 66, `700 11px ${SANS}`, on ? '#fff' : COLORS.softInk);
+      const x = W - M - 195 + i * 30, on = i === activeWd;
+      if (on) { ctx.fillStyle = COLORS.accent; ctx.beginPath(); ctx.arc(x, M + 62, 11, 0, Math.PI * 2); ctx.fill(); }
+      text(ctx, d, x, M + 66, `700 12px ${SANS}`, on ? '#fff' : COLORS.softInk);
     });
     ctx.textAlign = 'left'; ctx.restore();
     dotLine(ctx, M, L.thankY + 4, L.thankW);
@@ -537,7 +539,8 @@ window.LJTemplates = (function () {
   // Tappable S M T W T F S markers in the daily header → jump to that weekday.
   function dailyWeekdayRects() {
     const out = [];
-    for (let i = 0; i < 7; i++) out.push({ wd: i, x: W - M - 128 + i * 20 - 11, y: M + 56 - 12, w: 22, h: 24 });
+    // One 30-wide target per letter, edge to edge — no overlap, no dead zones.
+    for (let i = 0; i < 7; i++) out.push({ wd: i, x: W - M - 195 + i * 30 - 15, y: M + 62 - 17, w: 30, h: 34 });
     return out;
   }
 

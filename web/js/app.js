@@ -871,8 +871,8 @@
     const page = currentPage();
     if (!page) return;
     const s = (state.canvas && state.canvas.scaleFactor) || 1;
-    const add = (rect, onClick, title) => {
-      const b = el('div', 'lj-link');
+    const add = (rect, onClick, title, cls) => {
+      const b = el('div', 'lj-link' + (cls ? ' ' + cls : ''));
       b.style.left = (rect.x * s) + 'px';
       b.style.top = (rect.y * s) + 'px';
       b.style.width = (rect.w * s) + 'px';
@@ -902,7 +902,7 @@
       const sunday = base - new Date(base).getUTCDay() * LJPlanner.DAY_MS;
       LJTemplates.dailyWeekdayRects().forEach((r) => {
         const ds = LJPlanner.isoFromTs(sunday + r.wd * LJPlanner.DAY_MS);
-        add({ x: r.x, y: r.y, w: r.w, h: r.h }, () => goToDate(ds), ds);
+        add({ x: r.x, y: r.y, w: r.w, h: r.h }, () => goToDate(ds), ds, 'lj-wd');
       });
     } else if (page.template === 'planWeekSermon' && page.weekStart) {
       const p = LJPlanner.parseISO(page.weekStart);
