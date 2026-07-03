@@ -151,6 +151,8 @@ body[data-theme="ink"] #library {
 .jcard-progress { display: none; margin-top: 10px; }
 .jcard-progress .bar { height: 3px; border-radius: 2px; background: rgba(255,255,255,.12); overflow: hidden; }
 .jcard-progress .bar i { display: block; height: 100%; width: var(--prog, 0%); background: var(--red); border-radius: 2px; }
+.jcard-progress .jp-day { display: block; font-size: 10.5px; color: var(--soft-ink); margin-top: 7px; }
+.jcard-continue { display: none; font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--soft-ink); margin: 12px auto 0 14px; }
 
 /* Ink & Glass: cards become dark glass panels with an LJ monogram */
 body[data-theme="ink"] .jcard {
@@ -165,6 +167,7 @@ body[data-theme="ink"] .jcard-title { text-shadow: none; }
 body[data-theme="ink"] .jcard-count { color: var(--soft-ink); }
 body[data-theme="ink"] .jcard-progress { display: block; }
 body[data-theme="ink"] .jcard-band { width: 6px; right: 12%; }
+body[data-theme="ink"] .jcard-continue { display: block; }
 
 .new-card {
   background: transparent !important; border: 1.5px dashed var(--rule); box-shadow: none !important;
@@ -237,6 +240,8 @@ body[data-theme="ink"] .dock { background: #1c2330; border: 1px solid #262e3c; }
 .side-chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
 .side-day { font-size: 12.5px; color: var(--soft-ink); margin-top: 16px; }
 .side-day b { color: var(--accent); font-weight: 700; }
+.side-prog { height: 3px; border-radius: 2px; background: var(--faint); overflow: hidden; width: 100%; }
+.side-prog i { display: block; height: 100%; background: var(--red); border-radius: 2px; }
 @media (max-width: 1100px) { .side { display: none; } }
 
 /* Overflow tools menu */

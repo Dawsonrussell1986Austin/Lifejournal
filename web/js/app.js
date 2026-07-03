@@ -73,11 +73,12 @@
           <div class="jcard-top">
             <span class="jcard-cross">✝</span>
             <span class="jcard-mono">L<em>J</em></span>
+            ${isPlanner ? '<span class="jcard-continue">Continue writing →</span>' : ''}
             <button class="jcard-del" title="Delete journal">🗑</button>
           </div>
           <div class="jcard-title">${escapeHtml(j.title)}</div>
           <div class="jcard-count">${count}</div>
-          ${isPlanner ? '<div class="jcard-progress"><div class="bar"><i></i></div></div>' : ''}
+          ${isPlanner ? `<div class="jcard-progress"><div class="bar"><i></i></div><span class="jp-day">Day ${doy} of 365</span></div>` : ''}
         </div>`;
       tile.querySelector('.jcard-del').onclick = (e) => { e.stopPropagation(); deleteJournal(j.id); };
       tile.onclick = () => openJournal(j.id);
@@ -567,6 +568,9 @@
     if (state.journal && state.canvas) {
       const page = currentPage();
       state.canvas.setTemplate(page.template, JournalCanvas.templateOpts(page, state.journal));
+      renderFieldLayer();
+      renderInteractiveLayer();
+      renderSideChips();
     }
   }
   function toggleTheme() {
@@ -631,6 +635,16 @@
     const today = idx != null ? state.journal.pages[idx] : null;
     const onToday = today && currentPage() && currentPage().id === today.id;
     const checks = today ? (onToday ? state.checks : LJStore.loadPageData(today.id).checks) : {};
+    const sideLabel = document.querySelector('.side-label');
+    if (state.theme === 'ink') {
+      // Ink & Glass sidebar shows the year progress bar (per the mock)
+      if (sideLabel) sideLabel.textContent = 'Progress';
+      const doyNow = dayOfYear(new Date());
+      box.innerHTML = `<div class="side-prog"><i style="width:${Math.min(100, Math.round(doyNow / 365 * 100))}%"></i></div>`;
+      sideDay.innerHTML = `Day ${doyNow} of 365`;
+      return;
+    }
+    if (sideLabel) sideLabel.textContent = 'Five Foundations';
     SIDE_FND.forEach((lab, i) => {
       const id = 'fnd' + i;
       const b = el('button', 'side-chip' + (checks[id] ? ' on' : ''), lab);

@@ -428,18 +428,44 @@ window.LJTemplates = (function () {
     for (let i = 0; i < L.jrnRows; i++) f.push({ id: 'jrn' + i, x: M, y: L.jrnTop + i * L.jrnGap, w: L.leftW, size: 22, serif: true, italic: true });
     return f;
   }
-  function daySection(ctx, title, prompt, x, y) {
+  function daySection(ctx, title, prompt, x, y, color) {
     ctx.save();
-    ctx.font = `700 12px ${SANS}`; ctx.fillStyle = COLORS.softInk; ctx.textBaseline = 'alphabetic';
+    ctx.font = `700 12px ${SANS}`; ctx.fillStyle = color || COLORS.softInk; ctx.textBaseline = 'alphabetic';
     setLetterSpacing(ctx, 1.5); ctx.fillText(title, x, y);
     const w = ctx.measureText(title).width;
     setLetterSpacing(ctx, 0); ctx.restore();
     if (prompt) text(ctx, prompt, x + w + 14, y, `400 11px ${SANS}`, COLORS.softInk);
   }
+  // Glass card backdrop for the Ink & Glass daily layout.
+  function glassCard(ctx, x, y, w, h, fill, stroke) {
+    ctx.save();
+    ctx.fillStyle = fill;
+    roundRect(ctx, x, y, w, h, 16); ctx.fill();
+    ctx.strokeStyle = stroke || 'rgba(255,255,255,0.06)'; ctx.lineWidth = 1;
+    roundRect(ctx, x + 0.5, y + 0.5, w - 1, h - 1, 16); ctx.stroke();
+    ctx.restore();
+  }
   function drawDaily(ctx, dated) {
     const L = dailyLayout();
+    const dark = COLORS.dark;
+
+    // Ink & Glass: app-like glass cards behind each region (drawn first).
+    if (dark) {
+      // red-tinted "thankful for" banner
+      glassCard(ctx, M - 18, M + 8, L.thankW + 36, 92, '#221518', 'rgba(219,74,51,0.28)');
+      // schedule card
+      const schedY0 = L.schedLabelY - 32;
+      glassCard(ctx, M - 18, schedY0, L.leftW + 36, (L.schedTop + L.schedPerCol * L.schedRowH) - schedY0 + 4, '#161c26');
+      // top 3 card
+      const topY0 = L.top3Y - 56;
+      glassCard(ctx, L.rx - 18, topY0, L.rw + 36, (L.top3Y + 2 * L.top3Gap + 26) - topY0, '#161c26');
+      // journal card
+      const jrnY0 = L.jrnLabelY - 34;
+      glassCard(ctx, M - 18, jrnY0, L.leftW + 36, (L.jrnTop + (L.jrnRows - 1) * L.jrnGap) - jrnY0 + 28, '#161c26');
+    }
+
     setLetterSpacing(ctx, 2);
-    text(ctx, 'I AM THANKFUL FOR…', M, M + 34, `700 12px ${SANS}`, COLORS.softInk);
+    text(ctx, dark ? 'THANKFUL FOR' : 'I AM THANKFUL FOR…', M, M + 34, `700 12px ${SANS}`, dark ? COLORS.red : COLORS.softInk);
     setLetterSpacing(ctx, 0);
     // date (top-right, serif) + weekday markers below it
     let activeWd = -1, dateStr = 'Date        /        /';
@@ -488,12 +514,15 @@ window.LJTemplates = (function () {
       ctx.restore();
     });
 
-    // Scripture card
-    ctx.save();
-    ctx.fillStyle = COLORS.dark ? '#1b212c' : '#f1ecdf';
-    roundRect(ctx, L.card.x, L.card.y, L.card.w, L.card.h, 16); ctx.fill();
-    ctx.restore();
-    daySection(ctx, 'SCRIPTURE', 'What did I read?', L.rx, L.scr.y);
+    // Scripture card (green-tinted glass in the dark theme)
+    if (dark) glassCard(ctx, L.card.x, L.card.y, L.card.w, L.card.h, '#161f1a', 'rgba(90,140,110,0.25)');
+    else {
+      ctx.save();
+      ctx.fillStyle = '#f1ecdf';
+      roundRect(ctx, L.card.x, L.card.y, L.card.w, L.card.h, 16); ctx.fill();
+      ctx.restore();
+    }
+    daySection(ctx, 'SCRIPTURE', 'What did I read?', L.rx, L.scr.y, dark ? '#9fcdb0' : null);
     L.scr.d.forEach((y) => dotLine(ctx, L.rx, y, L.rw, COLORS.faint));
     daySection(ctx, 'OBSERVE & APPLY', 'What did I learn?', L.rx, L.obs.y);
     L.obs.d.forEach((y) => dotLine(ctx, L.rx, y, L.rw, COLORS.faint));
