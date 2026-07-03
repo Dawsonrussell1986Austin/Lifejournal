@@ -387,10 +387,10 @@ window.LJTemplates = (function () {
       schedLabelY: M + 128, schedTop: M + 172, schedRowH: 46, schedPerCol: 9,
       top3Y: M + 168, top3Gap: 44,
       fndLabelY: M + 320, fndRows: [M + 348, M + 388], chipH: 30,
-      card: { x: rx - 18, y: M + 436, w: rw + 36, h: 392 },
+      card: { x: rx - 18, y: M + 436, w: rw + 36, h: 682 },
       scr: { y: M + 478, d: [M + 520, M + 556] },
-      obs: { y: M + 602, d: [M + 644, M + 680] },
-      gos: { y: M + 724, d: [M + 766, M + 800] },
+      obs: { y: M + 602, d: [0, 1, 2, 3, 4, 5].map((i) => M + 644 + i * 36) },
+      gos: { y: M + 870, d: [0, 1, 2, 3, 4, 5].map((i) => M + 912 + i * 36) },
       jrnLabelY: M + 618, jrnTop: M + 656, jrnGap: 40, jrnRows: 12
     };
   }
