@@ -793,15 +793,15 @@ window.LJTemplates = (function () {
   function weeklyPrayer(ctx, o) {
     weekRangeLabel(ctx, o);
     label(ctx, 'Prayer Journal', M, M + 36, { size: 22, color: COLORS.ink });
-    label(ctx, '12-Week Prayer', M, M + 86, { size: 13, color: COLORS.ink });
-    caption(ctx, 'Write one prayer to pray each day through these twelve weeks.', M + 210, M + 86);
+    const wp12 = label(ctx, '12-Week Prayer', M, M + 86, { size: 13, color: COLORS.ink });
+    caption(ctx, 'Write one prayer to pray each day through these twelve weeks.', M + wp12 + 24, M + 86);
     dotRows(ctx, M, M + 116, W - 2 * M, 6, 30);
-    label(ctx, 'Weekly Prayer Focus', M, M + 336, { size: 13, color: COLORS.ink });
-    caption(ctx, 'Who and what will you pray for this week?', M + 250, M + 336);
+    const wpf = label(ctx, 'Weekly Prayer Focus', M, M + 336, { size: 13, color: COLORS.ink });
+    caption(ctx, 'Who and what will you pray for this week?', M + wpf + 24, M + 336);
     dayHeads(ctx, M, M + 360, W - 2 * M);
     ruled(ctx, M, M + 380, W - 2 * M, 9, 40);
-    label(ctx, "God's Provision", M, M + 760, { size: 13, color: COLORS.ink });
-    caption(ctx, 'How has God answered or worked this week?', M + 210, M + 760);
+    const wgp = label(ctx, "God's Provision", M, M + 760, { size: 13, color: COLORS.ink });
+    caption(ctx, 'How has God answered or worked this week?', M + wgp + 24, M + 760);
     dotRows(ctx, M, M + 790, W - 2 * M, 7, 30);
   }
 
@@ -995,11 +995,11 @@ window.LJTemplates = (function () {
     const L = weeklyFoundationsLayout();
     weekRangeLabel(ctx, o);
     label(ctx, 'Five Foundations', M, M + 36, { size: 22, color: COLORS.ink });
-    label(ctx, "This Week's Foundations", M, M + 86, { size: 13, color: COLORS.ink });
-    caption(ctx, 'Your commitment for each foundation this week.', M + 250, M + 86);
+    const wtwf = label(ctx, "This Week's Foundations", M, M + 86, { size: 13, color: COLORS.ink });
+    caption(ctx, 'Your commitment for each foundation this week.', M + wtwf + 24, M + 86);
     FOUND.forEach((f, i) => fieldLine(ctx, f, M, M + 124 + i * 40, W - 2 * M, 110));
-    label(ctx, 'Weekly Progress', M, L.progLabelY, { size: 13, color: COLORS.ink });
-    caption(ctx, 'Track progress to completing your goals.', M + 220, L.progLabelY);
+    const wprog = label(ctx, 'Weekly Progress', M, L.progLabelY, { size: 13, color: COLORS.ink });
+    caption(ctx, 'Track progress to completing your goals.', M + wprog + 24, L.progLabelY);
     FOUND.forEach((f, i) => { const y = L.progY + i * L.progGap; text(ctx, f.toUpperCase(), M, y, `600 12px ${SANS}`, COLORS.ink); hline(ctx, M + 96, y, W - 2 * M - 96 - 34, COLORS.faint); });
     label(ctx, 'Five Foundations Prayer', M, L.prayerY, { size: 13, color: COLORS.ink });
     dotRows(ctx, M, L.prayerY + 26, W - 2 * M, 3, 30);
