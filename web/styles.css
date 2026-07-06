@@ -710,4 +710,24 @@ body[data-theme="ink"] .mobile-tabs { background: #12161e; }
   .modal { padding: 12px; }
   .modal-card { padding: 18px; border-radius: 18px; max-height: 84vh; }
   .header-actions #newJournalBtn { padding: 8px 12px; font-size: 13px; }
+
+  /* Guided morning flow on phones: one question per screen, full-height */
+  #morningFlow {
+    align-items: stretch; padding: 0;
+    overflow-y: auto; -webkit-overflow-scrolling: touch;
+  }
+  .mf-inner {
+    width: 100%; min-height: 100%;
+    display: flex; flex-direction: column;
+    padding: calc(20px + env(safe-area-inset-top, 0px)) 18px
+             calc(20px + env(safe-area-inset-bottom, 0px));
+  }
+  .mf-greet { font-size: 30px; margin: 6px 0 20px; }
+  .mf-spark { font-size: 26px; margin-right: 10px; vertical-align: 2px; }
+  .mf-card { padding: 20px 18px 16px; border-radius: 20px; }
+  .mf-hero { font-size: 20px; }
+  #mfBody { max-height: none; }
+  /* stack the schedule's two columns on a narrow screen */
+  .mf-sched { grid-template-columns: 1fr; column-gap: 0; }
+  .mf-chips { margin-top: 16px; }
 }
