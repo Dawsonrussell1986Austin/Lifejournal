@@ -12,7 +12,7 @@ window.LJData = (function () {
     },
     dark: {
       ink: '#e8ecf2', softInk: '#8b97a8', rule: '#39404d', faint: '#272d38',
-      accent: '#5a8c6e', red: '#db4a33', paper: '#141a24', dark: true
+      accent: '#b5623f', red: '#db4a33', paper: '#141a24', dark: true
     }
   };
   const COLORS = Object.assign({}, PALETTES.light);
