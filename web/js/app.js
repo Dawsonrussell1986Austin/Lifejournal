@@ -197,6 +197,37 @@
     toast('New cycle · ' + LJPlanner.partsFor(nextStartISO).long);
   }
 
+  // ---------- End-of-cycle reflection ----------
+  function showCycleDone(journal) {
+    state.doneJournal = journal;
+    const a = LJPlanner.partsFor(journal.startISO), b = LJPlanner.partsFor(LJPlanner.cycleEndISO(journal.startISO));
+    $('#cdSub').textContent = `${a.long} – ${b.long}`;
+    $('#cdMoved').value = ''; $('#cdCarry').value = '';
+    $('#library').classList.add('hidden');
+    $('#editor').classList.add('hidden');
+    $('#morningFlow').classList.add('hidden');
+    $('#cycleDone').classList.remove('hidden');
+  }
+  // Persist the reflection onto the cycle's last day, and mark it seen.
+  function saveCycleReflection(journal) {
+    const moved = ($('#cdMoved').value || '').trim(), carry = ($('#cdCarry').value || '').trim();
+    if (moved || carry) {
+      const days = journal.pages.filter((p) => p.template === 'planDay');
+      const last = days[days.length - 1];
+      if (last) {
+        const d = LJStore.loadPageData(last.id); d.fields = d.fields || {};
+        const lines = [];
+        if (moved) lines.push('What moved: ' + moved);
+        if (carry) lines.push('Carry forward: ' + carry);
+        let k = 0;
+        for (let i = 0; i < 12 && k < lines.length; i++) { if (!d.fields['jrn' + i]) d.fields['jrn' + i] = lines[k++]; }
+        LJStore.savePageData(last.id, d);
+      }
+    }
+    LJKV.set('lifejournal.cycledone.' + journal.id, '1');
+    scheduleAutoSync();
+  }
+
   // ---------- AI: draft a Five Foundations goal into a 12-week plan ----------
   // Split a sentence into two writing lines (near the middle, on a space).
   function splitTwo(str) {
@@ -325,6 +356,11 @@
   function openJournal(id, skipFlow) {
     const j = state.lib.journals.find((x) => x.id === id);
     if (!j) return;
+    // A completed cycle greets you with the reflection moment (once).
+    if (!skipFlow && j.cycle && window.LJPlanner) {
+      const st = LJPlanner.cycleStatus(j.startISO);
+      if (st.state === 'done' && !LJKV.get('lifejournal.cycledone.' + j.id)) { showCycleDone(j); return; }
+    }
     // Opening the planner starts the daily flow if it hasn't run today.
     if (!skipFlow && j.kind === 'planner' && maybeMorningFlow(j, true)) return;
     state.journal = j;
@@ -886,21 +922,33 @@
     if ((data.fields || {}).th0) return false;
 
     const ctx = flowContext(planner, iso);
-    flow.planner = planner; flow.tp = tp; flow.iso = iso; flow.ctx = ctx;
+    const cyc = planner.cycle && window.LJPlanner ? LJPlanner.cycleStatus(planner.startISO, iso) : null;
+    flow.planner = planner; flow.tp = tp; flow.iso = iso; flow.ctx = ctx; flow.cyc = cyc;
     flow.fromJournal = !!fromJournal;
+    // Seed each foundation's "Today I will…" from this week's commitment so
+    // the daily tasks ladder up to the week's plan (editable).
+    const seededSteps = SIDE_FND.map((_, i) => (cyc ? (ctx.weekly['goal' + i] || '') : ''));
     flow.data = {
       reviewChecks: Object.assign({}, ctx.yChecks),
       reviewNote: '', thank: '', tops: ['', '', ''], scr: '', journal: '', prayer: '',
-      sch: {}, steps: ['', '', '', '', ''], remindTime: '07:00'
+      sch: {}, steps: seededSteps, remindTime: '07:00',
+      cycleGoals: cyc ? LJData.FOUNDATIONS.map((F, i) => ctx.goals['g' + i + 'goal'] || '') : []
     };
     const hasYesterday = !!(ctx.ypage && (ctx.yFields.top0 || ctx.yFields.top1 || ctx.yFields.top2));
     flow.steps = [];
+    // On day 1 of a cycle, the ritual opens with goal-setting.
+    if (cyc && cyc.day === 1) flow.steps.push('cyclegoals');
     if (hasYesterday) flow.steps.push('review');
     flow.steps.push('thank', 'scripture', 'tops', 'journal', 'schedule', 'foundations');
     if (window.LJNotify && LJNotify.available() && !LJKV.get('lifejournal.reminder')) flow.steps.push('reminder');
     flow.step = 0;
     const day = new Date().toLocaleDateString(undefined, { weekday: 'long' });
     $('#mfGreeting').textContent = `Happy ${day}.`;
+    const kicker = $('#mfKicker');
+    if (kicker) {
+      if (cyc && cyc.state === 'active') { kicker.textContent = `Week ${cyc.week} · Day ${cyc.day} of ${cyc.total}`; kicker.classList.remove('hidden'); }
+      else kicker.classList.add('hidden');
+    }
     $('#library').classList.add('hidden');
     $('#morningFlow').classList.remove('hidden');
     renderFlowStep();
@@ -946,6 +994,16 @@
       const note = mfInputRow((v) => (v === undefined ? d.reviewNote : (d.reviewNote = v)), 'One line — how did it go?');
       note.classList.add('mf-serifin');
       body.appendChild(note);
+    } else if (kind === 'cyclegoals') {
+      body.appendChild(mfLabel('First — set your Five Foundations goals for these 12 weeks.'));
+      body.appendChild(el('p', 'mf-sub', 'One goal per foundation. You can refine each — and use ✦ Draft with AI — on its own page later.'));
+      LJData.FOUNDATIONS.forEach((F, i) => {
+        const sec = el('div', 'mf-fnd');
+        sec.appendChild(el('div', 'mf-fnd-name', F.name));
+        const inp = mfInputRow((v) => (v === undefined ? d.cycleGoals[i] : (d.cycleGoals[i] = v)), planPlaceholder(F.key));
+        sec.appendChild(inp);
+        body.appendChild(sec);
+      });
     } else if (kind === 'thank') {
       const inp = mfInputRow((v) => (v === undefined ? d.thank : (d.thank = v)),
         'Let’s start with what you’re thankful for today…', 'mf-hero');
@@ -1102,6 +1160,23 @@
 
   function finishFlow() {
     const d = flow.data;
+    // Day-1 cycle goals → each foundation's blueprint page (WHAT), without
+    // clobbering a richer AI-drafted goal already on the page.
+    if (d.cycleGoals && d.cycleGoals.length && flow.planner.cycle) {
+      d.cycleGoals.forEach((g, i) => {
+        if (!g || !g.trim()) return;
+        const bp = flow.planner.pages.find((p) => p.template === 'foundationBlueprint' && p.foundation === i);
+        if (!bp) return;
+        const bd = LJStore.loadPageData(bp.id); bd.fields = bd.fields || {};
+        const existing = [bd.fields.what0, bd.fields.what1].filter(Boolean).join(' ').trim();
+        if (existing === g.trim()) return;      // unchanged from prefill
+        if (!bd.fields.what0) {
+          const two = splitTwo(g.trim());
+          bd.fields.what0 = two[0]; if (two[1]) bd.fields.what1 = two[1];
+          LJStore.savePageData(bp.id, bd);
+        }
+      });
+    }
     // Yesterday's review: check off what got done + a reflection line.
     if (flow.ctx.ypage) {
       const y = LJStore.loadPageData(flow.ctx.ypage.id);
@@ -2201,6 +2276,14 @@
     $('#njCancel').onclick = () => $('#newJournalModal').classList.add('hidden');
     $('#njCreate').onclick = createJournal;
     if ($('#njStart')) $('#njStart').oninput = updateNjRange;
+    if ($('#cdRenew')) $('#cdRenew').onclick = () => {
+      const j = state.doneJournal; saveCycleReflection(j);
+      $('#cycleDone').classList.add('hidden'); startNextCycle(j);
+    };
+    if ($('#cdView')) $('#cdView').onclick = () => {
+      const j = state.doneJournal; saveCycleReflection(j);
+      $('#cycleDone').classList.add('hidden'); openJournal(j.id);
+    };
     if ($('#planCancel')) $('#planCancel').onclick = () => $('#planModal').classList.add('hidden');
     if ($('#planGo')) $('#planGo').onclick = runFoundationPlan;
     if ($('#planGoal')) $('#planGoal').addEventListener('keydown', (e) => { if (e.key === 'Enter') runFoundationPlan(); });

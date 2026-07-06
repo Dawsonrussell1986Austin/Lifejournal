@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#b5623f" />
   <title>Life Journal</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%23b5623f'/%3E%3Ctext x='8' y='12' font-size='11' text-anchor='middle' fill='%23f4f1e8'%3E%E2%9C%9D%3C/text%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="styles.css?v=31" />
+  <link rel="stylesheet" href="styles.css?v=32" />
 </head>
 <body>
   <!-- Library / shelf -->
@@ -48,6 +48,7 @@
   <!-- Guided morning flow (iPad / desktop) -->
   <section id="morningFlow" class="screen hidden">
     <div class="mf-inner">
+      <div id="mfKicker" class="mf-kicker hidden"></div>
       <h1 class="mf-greet"><span class="mf-spark">✳</span><span id="mfGreeting">Happy Friday.</span></h1>
       <div class="mf-card">
         <div id="mfBody" class="mf-body"></div>
@@ -58,6 +59,25 @@
       </div>
       <div class="mf-chips">
         <button id="mfSkip" class="mf-chip">Skip to my journal →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- End-of-cycle reflection -->
+  <section id="cycleDone" class="screen hidden">
+    <div class="mf-inner">
+      <div class="cd-badge">✦</div>
+      <h1 class="mf-greet">You finished 12 weeks.</h1>
+      <p class="cd-sub" id="cdSub"></p>
+      <div class="mf-card">
+        <div class="mf-label">Look back — what moved this cycle?</div>
+        <textarea id="cdMoved" class="mf-textarea" rows="3" placeholder="Wins, breakthroughs, what God did…"></textarea>
+        <div class="mf-label">What will you carry forward?</div>
+        <textarea id="cdCarry" class="mf-textarea" rows="2" placeholder="Goals or habits to keep going…"></textarea>
+        <div class="mf-choices">
+          <button id="cdRenew" class="btn primary mf-big">Start next 12 weeks →</button>
+          <button id="cdView" class="btn mf-big">Just view this journal</button>
+        </div>
       </div>
     </div>
   </section>
@@ -276,17 +296,17 @@
 
   <div id="toast" class="toast hidden"></div>
 
-  <script src="js/data.js?v=31"></script>
-  <script src="js/bible.js?v=31"></script>
-  <script src="js/storage.js?v=31"></script>
-  <script src="js/templates.js?v=31"></script>
-  <script src="js/planner.js?v=31"></script>
-  <script src="js/store.js?v=31"></script>
-  <script src="js/canvas.js?v=31"></script>
-  <script src="js/pdf.js?v=31"></script>
-  <script src="js/sync.js?v=31"></script>
-  <script src="js/iap.js?v=31"></script>
-  <script src="js/native.js?v=31"></script>
-  <script src="js/app.js?v=31"></script>
+  <script src="js/data.js?v=32"></script>
+  <script src="js/bible.js?v=32"></script>
+  <script src="js/storage.js?v=32"></script>
+  <script src="js/templates.js?v=32"></script>
+  <script src="js/planner.js?v=32"></script>
+  <script src="js/store.js?v=32"></script>
+  <script src="js/canvas.js?v=32"></script>
+  <script src="js/pdf.js?v=32"></script>
+  <script src="js/sync.js?v=32"></script>
+  <script src="js/iap.js?v=32"></script>
+  <script src="js/native.js?v=32"></script>
+  <script src="js/app.js?v=32"></script>
 </body>
 </html>

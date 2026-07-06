@@ -652,6 +652,7 @@ window.LJTemplates = (function () {
   }
   function planWeekFields() {
     const g = LJPlanner.weekRowGeom(), f = [];
+    f.push({ id: 'wkscore', x: W - M - 104, y: M + 78, w: 74, size: 20 });
     for (let i = 0; i < 7; i++) f.push({ id: 'd' + i, x: M, y: g.top + i * g.rowH + 58, w: W - 2 * M, size: 24 });
     return f;
   }
@@ -726,6 +727,12 @@ window.LJTemplates = (function () {
     label(ctx, 'Week', M, M + 40, { size: 24, color: COLORS.ink });
     text(ctx, `${ws.shortMonthDay} – ${we.shortMonthDay}, ${we.year}`, M, M + 74, `400 16px ${SANS}`, COLORS.softInk);
     text(ctx, '‹ ' + ws.monthName, W - M - 170, M + 38, `500 15px ${SANS}`, COLORS.accent);
+    // Weekly execution score (12 Week Year): rate how much of the plan you kept.
+    setLetterSpacing(ctx, 1.5);
+    text(ctx, 'WEEK EXECUTION', W - M - 250, M + 74, `700 11px ${SANS}`, COLORS.softInk);
+    setLetterSpacing(ctx, 0);
+    hline(ctx, W - M - 110, M + 80, 82, COLORS.rule);
+    text(ctx, '%', W - M - 22, M + 78, `600 20px ${SERIF}`, COLORS.softInk);
     caption(ctx, 'Tap a day to open it.', M, M + 102);
     P.weekDayRects(o.weekStart).forEach((r, i) => {
       const d = P.partsFor(r.date);
