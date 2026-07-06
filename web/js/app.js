@@ -282,7 +282,7 @@
       if (!r.ok) throw new Error(j.error === 'not configured' ? 'Plan creation isn’t set up yet — you can still fill this in by hand.' : (j.error || 'Something went wrong.'));
       applyFoundationPlan(fi, j);
       $('#planModal').classList.add('hidden');
-      toast('Your ' + F.name + ' plan is ready ✦');
+      toast('Your ' + F.name + ' plan is ready');
     } catch (e) {
       $('#planStatus').textContent = e.message;
       $('#planGo').disabled = false;
@@ -1530,7 +1530,7 @@
     wrap.appendChild(el('div', 'm-kicker', 'Five Foundations · 12-Week Goal'));
     wrap.appendChild(el('h1', 'm-date', F.name));
 
-    const ai = el('button', 'm-ai-plan', '✦ Have LifeJournal create my plan');
+    const ai = el('button', 'm-ai-plan', 'Have LifeJournal create my plan');
     ai.onclick = () => openFoundationPlan(page.foundation);
     wrap.appendChild(ai);
 

@@ -821,7 +821,7 @@ window.LJTemplates = (function () {
     roundRect(ctx, gr.x, gr.y, gr.w, gr.h, gr.h / 2);
     ctx.fillStyle = COLORS.accent; ctx.fill();
     ctx.textAlign = 'center';
-    text(ctx, '✦  Set your 12-week goals', gr.x + gr.w / 2, gr.y + gr.h / 2, `600 14px ${SANS}`, '#fff', 'middle');
+    text(ctx, 'Set your 12-week goals', gr.x + gr.w / 2, gr.y + gr.h / 2, `600 14px ${SANS}`, '#fff', 'middle');
     ctx.textAlign = 'left';
 
     // Month chips.
@@ -959,7 +959,7 @@ window.LJTemplates = (function () {
     roundRect(ctx, gr.x, gr.y, gr.w, gr.h, gr.h / 2);
     ctx.fillStyle = COLORS.accent; ctx.fill();
     ctx.textAlign = 'center';
-    text(ctx, '✦  Create my plan', gr.x + gr.w / 2, gr.y + gr.h / 2, `600 15px ${SANS}`, '#fff', 'middle');
+    text(ctx, 'Create my plan', gr.x + gr.w / 2, gr.y + gr.h / 2, `600 15px ${SANS}`, '#fff', 'middle');
     ctx.textAlign = 'left';
 
     // Anchor scripture + reference, then a short teaching intro.
