@@ -218,9 +218,11 @@ window.LJPlanner = (function () {
     const base = startTs(startISO);
     const pages = [
       { id: uid(), template: 'cover' },
-      { id: uid(), template: 'planCycle', startISO: startISO },
-      { id: uid(), template: 'foundationsGoals', startISO: startISO }
+      { id: uid(), template: 'planCycle', startISO: startISO }
     ];
+    // One Five Foundations blueprint page per foundation.
+    for (let fi = 0; fi < LJData.FOUNDATIONS.length; fi++)
+      pages.push({ id: uid(), template: 'foundationBlueprint', foundation: fi, startISO: startISO });
     cycleMonths(startISO).forEach((mm) =>
       pages.push({ id: uid(), template: 'planMonth', year: mm.year, month: mm.month }));
     for (let w = 0; w < CYCLE_WEEKS; w++) {

@@ -54,6 +54,7 @@ window.LJData = (function () {
     notesTasks:      { name: 'Notes / Tasks',            sub: 'Open notes with a task column' },
     foundationsDaily:{ name: 'Foundations Daily',        sub: 'Thankful · schedule · top 3 · daily steps' },
     foundationsGoals:{ name: '12-Week Goals',            sub: 'One goal per foundation for the cycle' },
+    foundationBlueprint:{ name: 'Foundation Blueprint',  sub: 'Scripture, goal & 12-week plan' },
     weeklyPrayer:    { name: 'Weekly Prayer Journal',    sub: '90-day prayer · weekly focus · provision' },
     weeklyFoundations:{ name: 'Weekly Five Foundations', sub: 'Goals · progress · prayer · habit tracking' },
     teachingNotes:   { name: 'Teaching Notes',           sub: 'Sermon / teaching / podcast notes' },
@@ -74,6 +75,41 @@ window.LJData = (function () {
     'soap', 'sermonNotes', 'prayerList', 'gratitude', 'dailyPlanner',
     'weeklyTop3', 'weeklySchedule', 'monthlyCalendar', 'notesTasks',
     'lined', 'dotted', 'blank'
+  ];
+
+  // ---- The Five Foundations (from the Goal-Setting Blueprints) ----
+  // Each foundation carries its anchor scripture, a short Gospel-focused
+  // teaching intro, a resource link, and drives one 12-week goal blueprint.
+  const FOUNDATIONS = [
+    { key: 'faith', name: 'Faith', verseRef: '2 Peter 1:5–8',
+      verse: '“…make every effort to add to your faith goodness; and to goodness, knowledge… For if you possess these qualities in increasing measure, they will keep you from being ineffective and unproductive in your knowledge of our Lord Jesus Christ.”',
+      intro: 'Deepen your dependence on Christ and His Word through daily spiritual disciplines. Set one Gospel-focused faith goal and watch your faith become tangible over these twelve weeks.',
+      url: 'gospelfocused.com/faith' },
+    { key: 'family', name: 'Family', verseRef: 'Ephesians 4:29–32',
+      verse: '“Do not let any unwholesome talk come out of your mouths, but only what is helpful for building others up… Be kind and compassionate to one another, forgiving each other, just as in Christ God forgave you.”',
+      intro: 'God places people in our lives on purpose, and the enemy wants to break those bonds. Choose one Gospel-focused goal to build up your family and relationships.',
+      url: 'gospelfocused.com/family' },
+    { key: 'finances', name: 'Finances', verseRef: 'Philippians 4:12–14',
+      verse: '“I have learned the secret of being content in any and every situation, whether well fed or hungry… I can do all this through him who gives me strength.”',
+      intro: 'Money reveals where our heart and passions are focused. Steward what God has entrusted to you so that finances become an area of joy, not stress.',
+      url: 'gospelfocused.com/finances' },
+    { key: 'fitness', name: 'Fitness', verseRef: 'Romans 12:1–2',
+      verse: '“…offer your bodies as a living sacrifice, holy and pleasing to God—this is your true and proper worship. …be transformed by the renewing of your mind.”',
+      intro: 'Caring for the body God gave you is a spiritual discipline. Pursue one Gospel-focused fitness goal that honors Him — for stewardship, never for identity.',
+      url: 'gospelfocused.com/fitness' },
+    { key: 'focus', name: 'Focus', verseRef: 'Jeremiah 29:11–14',
+      verse: '“For I know the plans I have for you,” declares the Lord, “plans to prosper you and not to harm you, plans to give you hope and a future.”',
+      intro: 'Zoom in on one goal — a skill, a language, a project — and pursue it with excellence. Pray through how people will experience the Gospel through it.',
+      url: 'gospelfocused.com/focus' }
+  ];
+  // The six-prompt blueprint each foundation goal is built on.
+  const BLUEPRINT = [
+    { id: 'what',  label: 'WHAT',  q: 'What is your 12-week Foundations goal?' },
+    { id: 'how',   label: 'HOW',   q: 'How will you accomplish it — daily, weekly, and monthly?' },
+    { id: 'who',   label: 'WHO',   q: 'Who will help you or hold you accountable?' },
+    { id: 'where', label: 'WHERE', q: 'Where will you work on this goal?' },
+    { id: 'when',  label: 'WHEN',  q: 'When will you spend time on it?' },
+    { id: 'why',   label: 'WHY',   q: 'Why does it matter — and what will it do for the Kingdom?' }
   ];
 
   const SWATCH_COLORS = ['#1f2330', '#2b59c3', '#c0392b', '#2e7d32', '#b8860b', '#7d3c98'];
@@ -100,5 +136,5 @@ window.LJData = (function () {
     });
   }
 
-  return { PAGE, COLORS, COVERS, TEMPLATES, INSERTABLE, SWATCH_COLORS, PAPERS, PAPER_ORDER, uid, setPalette, currentPalette };
+  return { PAGE, COLORS, COVERS, TEMPLATES, INSERTABLE, SWATCH_COLORS, PAPERS, PAPER_ORDER, FOUNDATIONS, BLUEPRINT, uid, setPalette, currentPalette };
 })();

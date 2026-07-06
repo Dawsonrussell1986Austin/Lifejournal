@@ -197,9 +197,100 @@
     toast('New cycle · ' + LJPlanner.partsFor(nextStartISO).long);
   }
 
+  // ---------- AI: draft a Five Foundations goal into a 12-week plan ----------
+  // Split a sentence into two writing lines (near the middle, on a space).
+  function splitTwo(str) {
+    str = String(str || '').trim();
+    if (str.length <= 58) return [str, ''];
+    let cut = str.lastIndexOf(' ', Math.ceil(str.length * 0.58));
+    if (cut < 20) cut = str.indexOf(' ', Math.floor(str.length * 0.45));
+    if (cut < 0) cut = Math.floor(str.length / 2);
+    return [str.slice(0, cut).trim(), str.slice(cut).trim()];
+  }
+
+  async function openFoundationPlan(fi) {
+    const F = window.LJData && LJData.FOUNDATIONS[fi];
+    if (!F) return;
+    // Generating a plan is a Pro feature (matches AI Bible studies); it stays
+    // unlocked until in-app purchases are configured.
+    if (window.LJIAP && !(await LJIAP.isPro())) { openPaywall(); return; }
+    state.planFoundation = fi;
+    $('#planTitle').textContent = 'Draft your ' + F.name + ' goal';
+    const onPage = state.journal && currentPage() && currentPage().template === 'foundationBlueprint';
+    const cur = onPage ? [state.fields.what0, state.fields.what1].filter(Boolean).join(' ').trim() : '';
+    $('#planGoal').value = cur;
+    $('#planGoal').placeholder = planPlaceholder(F.key);
+    $('#planStatus').textContent = '';
+    $('#planGo').disabled = false;
+    $('#planModal').classList.remove('hidden');
+    setTimeout(() => $('#planGoal').focus(), 60);
+  }
+
+  function planPlaceholder(key) {
+    return ({
+      faith: 'e.g. Read the New Testament in 12 weeks',
+      family: 'e.g. A weekly date night and family devotion',
+      finances: 'e.g. Build a $2,000 emergency fund',
+      fitness: 'e.g. Lose 20 lbs in 12 weeks',
+      focus: 'e.g. Finish my certification course'
+    })[key] || 'Your goal in one sentence…';
+  }
+
+  async function runFoundationPlan() {
+    const fi = state.planFoundation, F = LJData.FOUNDATIONS[fi];
+    const goal = ($('#planGoal').value || '').trim();
+    if (!goal) { $('#planStatus').textContent = 'Type your goal first.'; return; }
+    $('#planGo').disabled = true;
+    $('#planStatus').textContent = 'Drafting your 12-week plan…';
+    try {
+      const r = await fetch('/api/plan', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ foundation: F.name, goal: goal, weeks: 12, scripture: F.verseRef })
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error === 'not configured' ? 'AI isn’t configured yet — you can still fill this in by hand.' : (j.error || 'Something went wrong.'));
+      applyFoundationPlan(fi, j);
+      $('#planModal').classList.add('hidden');
+      toast('Your ' + F.name + ' plan is ready ✦');
+    } catch (e) {
+      $('#planStatus').textContent = e.message;
+      $('#planGo').disabled = false;
+    }
+  }
+
+  // Write the AI plan: the six blueprint prompts onto the foundation's page,
+  // and each week's commitment into that week's Weekly Foundations page.
+  function applyFoundationPlan(fi, plan) {
+    const journal = state.journal;
+    const bpIdx = state.blueprintIndex[fi];
+    const bp = bpIdx != null ? journal.pages[bpIdx] : null;
+    if (bp) {
+      const d = LJStore.loadPageData(bp.id);
+      d.fields = d.fields || {};
+      LJData.BLUEPRINT.forEach((p) => {
+        const val = plan[p.id];
+        if (!val) return;
+        const two = splitTwo(val);
+        d.fields[p.id + '0'] = two[0];
+        if (two[1]) d.fields[p.id + '1'] = two[1]; else delete d.fields[p.id + '1'];
+      });
+      LJStore.savePageData(bp.id, d);
+      if (currentPage() && currentPage().id === bp.id) { state.fields = d.fields; renderFieldLayer(); }
+    }
+    const wfPages = journal.pages.filter((p) => p.template === 'weeklyFoundations');
+    (plan.weeks || []).forEach((wk, k) => {
+      if (!wk || !wfPages[k]) return;
+      const d = LJStore.loadPageData(wfPages[k].id);
+      d.fields = d.fields || {};
+      d.fields['goal' + fi] = wk;
+      LJStore.savePageData(wfPages[k].id, d);
+    });
+    scheduleAutoSync();
+  }
+
   // ---------- Editor ----------
   function buildPlannerIndex() {
-    state.dateIndex = {}; state.monthIndex = {}; state.yearPageIndex = -1; state.goalsIndex = {}; state.weekIndex = {};
+    state.dateIndex = {}; state.monthIndex = {}; state.yearPageIndex = -1; state.goalsIndex = {}; state.weekIndex = {}; state.blueprintIndex = {};
     if (!state.journal) return;
     state.journal.pages.forEach((p, i) => {
       if (p.date) state.dateIndex[p.date] = i;
@@ -207,6 +298,10 @@
       if (p.template === 'planMonth') state.monthIndex[p.month] = i;
       if (p.template === 'planYear' || p.template === 'planCycle') state.yearPageIndex = i;
       if (p.template === 'foundationsGoals') state.goalsIndex[p.quarter != null ? p.quarter : 'cycle'] = i;
+      if (p.template === 'foundationBlueprint') {
+        state.blueprintIndex[p.foundation] = i;
+        if (state.goalsIndex.cycle == null) state.goalsIndex.cycle = i;   // first blueprint = Goals nav target
+      }
     });
   }
   function goToGoals() {
@@ -292,7 +387,7 @@
     if (window.LJPlanner) {
       $('#navToday').classList.toggle('active', !!page.date && page.date === LJPlanner.todayISO());
       $('#navCalendar').classList.toggle('active', page.template === 'planMonth');
-      $('#navGoals').classList.toggle('active', page.template === 'foundationsGoals');
+      $('#navGoals').classList.toggle('active', page.template === 'foundationsGoals' || page.template === 'foundationBlueprint');
     }
     updatePageMeta();
   }
@@ -564,6 +659,10 @@
     }
     if (page.template === 'planMonth') return `${LJPlanner.MONTHS[page.month]} ${page.year}`;
     if (page.template === 'foundationsGoals') return page.quarter != null ? `Q${page.quarter + 1} · 12-Week Goals` : '12-Week Goals';
+    if (page.template === 'foundationBlueprint') {
+      const F = (window.LJData && LJData.FOUNDATIONS[page.foundation]);
+      return (F ? F.name : 'Foundation') + ' · Blueprint';
+    }
     if (page.template === 'planCycle') return '12-Week Overview';
     if (page.template === 'planYear') return `${page.year} Overview`;
     if (page.template === 'planWeek' && page.weekStart) {
@@ -742,13 +841,23 @@
     if (yp) { const d = LJStore.loadPageData(yp.id); yFields = d.fields || {}; yChecks = d.checks || {}; ypage = yp; }
     const yRef = window.LJBible ? LJBible.parseRef(yFields.scr0 || '') : null;
 
-    // Goals for the Five Foundations: a 12-week cycle has a single goals page;
-    // a year planner has one per quarter — pick the current quarter's.
+    // Goals for the Five Foundations, normalized to g{i}goal keys. A cycle
+    // reads each foundation's WHAT from its blueprint page; a year planner
+    // reads the current quarter's combined goals page.
     const q = Math.floor(p.m / 3);
-    const gp = planner.cycle
-      ? planner.pages.find((pg) => pg.template === 'foundationsGoals')
-      : planner.pages.find((pg) => pg.template === 'foundationsGoals' && pg.quarter === q);
-    const goals = gp ? (LJStore.loadPageData(gp.id).fields || {}) : {};
+    let goals = {}, gp = null;
+    if (planner.cycle) {
+      LJData.FOUNDATIONS.forEach((F, fi) => {
+        const bp = planner.pages.find((pg) => pg.template === 'foundationBlueprint' && pg.foundation === fi);
+        if (!bp) return;
+        const bd = LJStore.loadPageData(bp.id).fields || {};
+        const what = [bd.what0, bd.what1].filter((v) => v && v.trim()).join(' ').trim();
+        if (what) goals['g' + fi + 'goal'] = what;
+      });
+    } else {
+      gp = planner.pages.find((pg) => pg.template === 'foundationsGoals' && pg.quarter === q);
+      goals = gp ? (LJStore.loadPageData(gp.id).fields || {}) : {};
+    }
     // This week's commitments: the weeklyFoundations page whose 7-day span
     // contains today (works for both Sunday-based years and cycle weeks).
     const wp = planner.pages.find((pg) => {
@@ -759,7 +868,7 @@
     });
     const weekly = wp ? (LJStore.loadPageData(wp.id).fields || {}) : {};
 
-    return { yIso, ypage, yFields, yChecks, yRef, suggestion: yRef ? nextChapterAfter(yRef) : null, goals, weekly };
+    return { yIso, ypage, yFields, yChecks, yRef, suggestion: yRef ? nextChapterAfter(yRef) : null, goals, goalsPage: gp, weekly };
   }
 
   function maybeMorningFlow(journalArg, fromJournal) {
@@ -1630,6 +1739,19 @@
     // Apple Calendar events on the daily schedule (via the iOS shell)
     renderCalEvents(page, layer, s);
 
+    // "Draft with AI" on a Foundation Blueprint page
+    if (page.template === 'foundationBlueprint') {
+      const r = LJTemplates.foundationAIRect();
+      const btn = el('button', 'lj-ai-plan');
+      btn.title = 'Turn a one-line goal into a full 12-week plan';
+      btn.style.left = (r.x * s) + 'px';
+      btn.style.top = (r.y * s) + 'px';
+      btn.style.width = (r.w * s) + 'px';
+      btn.style.height = (r.h * s) + 'px';
+      btn.onclick = () => openFoundationPlan(page.foundation);
+      layer.appendChild(btn);
+    }
+
     // "Create Bible Study" on the scripture card of daily pages
     if (page.template === 'planDay' || page.template === 'foundationsDaily') {
       const L = LJTemplates.dailyLayout();
@@ -2079,6 +2201,9 @@
     $('#njCancel').onclick = () => $('#newJournalModal').classList.add('hidden');
     $('#njCreate').onclick = createJournal;
     if ($('#njStart')) $('#njStart').oninput = updateNjRange;
+    if ($('#planCancel')) $('#planCancel').onclick = () => $('#planModal').classList.add('hidden');
+    if ($('#planGo')) $('#planGo').onclick = runFoundationPlan;
+    if ($('#planGoal')) $('#planGoal').addEventListener('keydown', (e) => { if (e.key === 'Enter') runFoundationPlan(); });
 
     $('#backBtn').onclick = backToLibrary;
     $('#prevPageBtn').onclick = () => loadPage(state.pageIndex - 1);

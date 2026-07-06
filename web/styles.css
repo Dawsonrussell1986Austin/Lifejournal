@@ -539,6 +539,8 @@ body[data-theme="ink"] .m-suggest { background: #12161e; }
   border-radius: 999px; padding: 5px 12px; font-size: 11.5px; font-weight: 700; letter-spacing: .5px;
 }
 .lj-study:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+.lj-ai-plan { position: absolute; pointer-events: auto; cursor: pointer; background: transparent; border: none; border-radius: 999px; }
+.lj-ai-plan:hover { background: rgba(255, 255, 255, 0.14); }
 body[data-theme="ink"] .lj-study { background: #161f1a; border-color: rgba(90,140,110,.4); color: #9fcdb0; }
 body[data-theme="ink"] .lj-study:hover { background: var(--accent); color: #fff; }
 

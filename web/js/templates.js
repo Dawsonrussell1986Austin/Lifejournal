@@ -694,6 +694,7 @@ window.LJTemplates = (function () {
       case 'sermonNotes': return sermonNotesFields();
       case 'prayerList': return prayerListFields();
       case 'foundationsGoals': return foundationsGoalsFields();
+      case 'foundationBlueprint': return foundationBlueprintFields();
       case 'planWeek': return planWeekFields();
       case 'gratitude': return gratitudeFields();
       case 'lined': return lineFields('l', M, M + 48, W - 2 * M, 26, 48, 28);
@@ -913,6 +914,73 @@ window.LJTemplates = (function () {
     return f;
   }
 
+  // Left-aligned word wrap; returns the y just past the last line drawn.
+  function wrapLeft(ctx, str, x, y, maxW, lineH, font, color, maxLines) {
+    ctx.save(); ctx.font = font; ctx.fillStyle = color; ctx.textBaseline = 'alphabetic';
+    const words = String(str).split(' '); const lines = []; let line = '';
+    for (const w of words) {
+      const test = line ? line + ' ' + w : w;
+      if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = w; }
+      else line = test;
+    }
+    if (line) lines.push(line);
+    const use = maxLines ? lines.slice(0, maxLines) : lines;
+    use.forEach((ln, i) => ctx.fillText(ln, x, y + i * lineH));
+    ctx.restore();
+    return y + use.length * lineH;
+  }
+
+  // ---- Foundation Blueprint (one page per foundation, 12-week goal) ----
+  function foundationAIRect() { return { x: W - M - 210, y: M + 44, w: 210, h: 44 }; }
+  function foundationBlueprintLayout() {
+    const top = M + 320, n = LJData.BLUEPRINT.length;
+    return { top, secH: (H - M - top) / n };
+  }
+  function foundationBlueprint(ctx, o) {
+    const F = LJData.FOUNDATIONS[o.foundation || 0];
+    const B = LJData.BLUEPRINT, L = foundationBlueprintLayout();
+    setLetterSpacing(ctx, 2);
+    text(ctx, 'FIVE FOUNDATIONS · 12-WEEK GOAL', M, M + 30, `700 12px ${SANS}`, COLORS.softInk);
+    setLetterSpacing(ctx, 0);
+    text(ctx, F.name, M, M + 84, `600 42px ${SERIF}`, COLORS.ink);
+    ctx.save(); ctx.textAlign = 'right';
+    text(ctx, `${(o.foundation || 0) + 1} / 5`, W - M, M + 30, `700 13px ${SANS}`, COLORS.faint);
+    ctx.restore();
+
+    // "Draft with AI" pill (top-right, below the count).
+    const gr = foundationAIRect();
+    roundRect(ctx, gr.x, gr.y, gr.w, gr.h, gr.h / 2);
+    ctx.fillStyle = COLORS.accent; ctx.fill();
+    ctx.textAlign = 'center';
+    text(ctx, '✦  Draft with AI', gr.x + gr.w / 2, gr.y + gr.h / 2, `600 15px ${SANS}`, '#fff', 'middle');
+    ctx.textAlign = 'left';
+
+    // Anchor scripture + reference, then a short teaching intro.
+    let y = wrapLeft(ctx, F.verse, M, M + 122, W - 2 * M, 24, `italic 17px ${SERIF}`, COLORS.softInk, 3);
+    text(ctx, '— ' + F.verseRef, M, y + 6, `600 13px ${SANS}`, COLORS.accent);
+    wrapLeft(ctx, F.intro, M, y + 40, W - 2 * M, 22, `400 15px ${SANS}`, COLORS.ink, 3);
+
+    // The six blueprint prompts.
+    B.forEach((p, i) => {
+      const y0 = L.top + i * L.secH;
+      setLetterSpacing(ctx, 1.5);
+      text(ctx, p.label, M, y0, `700 12px ${SANS}`, COLORS.accent);
+      setLetterSpacing(ctx, 0);
+      text(ctx, p.q, M + 70, y0, `400 13px ${SANS}`, COLORS.softInk);
+      ruled(ctx, M, y0 + 20, W - 2 * M, 2, 34, COLORS.faint);
+      if (i < B.length - 1) hline(ctx, M, y0 + L.secH - 18, W - 2 * M, COLORS.faint);
+    });
+  }
+  function foundationBlueprintFields() {
+    const B = LJData.BLUEPRINT, L = foundationBlueprintLayout(), f = [];
+    B.forEach((p, i) => {
+      const y0 = L.top + i * L.secH;
+      f.push({ id: p.id + '0', x: M, y: y0 + 20, w: W - 2 * M, size: 20, serif: true });
+      f.push({ id: p.id + '1', x: M, y: y0 + 54, w: W - 2 * M, size: 20, serif: true });
+    });
+    return f;
+  }
+
   function weeklyFoundationsLayout() {
     return { progLabelY: M + 340, progY: M + 376, progGap: 40, prayerY: M + 600, habitY: M + 760 };
   }
@@ -961,7 +1029,7 @@ window.LJTemplates = (function () {
     cover, soap, sermonNotes, prayerList, gratitude, dailyPlanner,
     weeklyTop3, weeklySchedule, monthlyCalendar, notesTasks, lined, dotted, blank,
     planYear, planMonth, planDay, planWeek, planWeekSermon, planCycle,
-    foundationsDaily, weeklyPrayer, weeklyFoundations, teachingNotes, foundationsGoals
+    foundationsDaily, weeklyPrayer, weeklyFoundations, teachingNotes, foundationsGoals, foundationBlueprint
   };
 
   // Mix a hex color toward white by `amt` (0..1). Used for the soft paper tint.
@@ -1012,5 +1080,5 @@ window.LJTemplates = (function () {
     ctx.restore();
   }
 
-  return { draw, checkRects, nowMarker, fieldRects, dailyWeekdayRects, dailyLayout };
+  return { draw, checkRects, nowMarker, fieldRects, dailyWeekdayRects, dailyLayout, foundationAIRect };
 })();
