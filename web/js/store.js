@@ -5,7 +5,7 @@
 //   lifejournal.photo.<jid>.<m>   -> data URL
 window.LJStore = (function () {
   const LIB_KEY = 'lifejournal.library.v1';
-  const PLANNER_FLAG = 'lifejournal.planner2026.created';
+  const CYCLE_FLAG = 'lifejournal.cycle.created';
   const pageKey = (id) => 'lifejournal.page.' + id;
   const photoKey = (journalId, month) => 'lifejournal.photo.' + journalId + '.' + month;
 
@@ -17,11 +17,12 @@ window.LJStore = (function () {
     } catch (e) { /* corrupt — rebuild below */ }
     if (!lib) lib = { journals: [sampleJournal()] };
 
-    // Seed the pre-made LifeJournal 2026 calendar once (respect deletion).
-    const hasPlanner = lib.journals.some((j) => j.kind === 'planner' && j.year === 2026);
-    if (!hasPlanner && !LJKV.get(PLANNER_FLAG) && window.LJPlanner) {
-      lib.journals.unshift(LJPlanner.generate(2026));
-      LJKV.set(PLANNER_FLAG, '1');
+    // Seed a starter 12-week journal (starting today) once, unless the user
+    // already has a planner journal or previously deleted the seed.
+    const hasPlanner = lib.journals.some((j) => j.kind === 'planner');
+    if (!hasPlanner && !LJKV.get(CYCLE_FLAG) && window.LJPlanner) {
+      lib.journals.unshift(LJPlanner.generateCycle(LJPlanner.todayISO(), { title: 'My 12-Week Journal', cover: 'terracotta' }));
+      LJKV.set(CYCLE_FLAG, '1');
     }
     // Bring older planners up to date (e.g. add week pages) without data loss.
     if (window.LJPlanner) lib.journals.forEach((j) => LJPlanner.migrate(j));

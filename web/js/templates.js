@@ -797,7 +797,69 @@ window.LJTemplates = (function () {
     dotRows(ctx, M, M + 790, W - 2 * M, 7, 30);
   }
 
-  // ---- Five Foundations 12-week goal setting (one page per quarter) ----
+  // ---- 12-week cycle overview (the journal's home page) ----
+  function planCycle(ctx, o) {
+    const P = LJPlanner, start = o.startISO;
+    const a = P.partsFor(start), b = P.partsFor(P.cycleEndISO(start));
+    setLetterSpacing(ctx, 2);
+    text(ctx, 'TWELVE WEEK YEAR', M, M + 30, `700 12px ${SANS}`, COLORS.softInk);
+    setLetterSpacing(ctx, 0);
+    text(ctx, '12-Week Journal', M, M + 80, `600 42px ${SERIF}`, COLORS.ink);
+    text(ctx, `${a.long}  →  ${b.long}`, M, M + 116, `400 18px ${SANS}`, COLORS.softInk);
+    text(ctx, '84 days · 12 weeks · one focused season', M, M + 140, `italic 15px ${SERIF}`, COLORS.softInk);
+
+    // Goals pill (top-right) → the single Five Foundations goals page.
+    const gr = P.cycleGoalsRect();
+    roundRect(ctx, gr.x, gr.y, gr.w, gr.h, gr.h / 2);
+    ctx.fillStyle = COLORS.accent; ctx.fill();
+    ctx.textAlign = 'center';
+    text(ctx, '✦  Set your 12-week goals', gr.x + gr.w / 2, gr.y + gr.h / 2, `600 14px ${SANS}`, '#fff', 'middle');
+    ctx.textAlign = 'left';
+
+    // Month chips.
+    const cg = P.cycleMonthChipGeom();
+    text(ctx, 'MONTHS IN THIS CYCLE', M, cg.y - 16, `600 11px ${SANS}`, COLORS.softInk);
+    P.cycleMonthChipRects(start).forEach((mr) => {
+      roundRect(ctx, mr.x, mr.y, mr.w, mr.h, 14);
+      ctx.strokeStyle = COLORS.rule; ctx.lineWidth = 1.3; ctx.stroke();
+      ctx.textAlign = 'center';
+      text(ctx, P.MONTHS[mr.month], mr.x + mr.w / 2, mr.y + mr.h / 2 - 8, `600 16px ${SANS}`, COLORS.accent, 'middle');
+      text(ctx, String(mr.year), mr.x + mr.w / 2, mr.y + mr.h / 2 + 13, `400 11px ${SANS}`, COLORS.softInk, 'middle');
+      ctx.textAlign = 'left';
+    });
+
+    // The twelve weeks.
+    const wg = P.cycleWeekRowGeom();
+    text(ctx, 'THE TWELVE WEEKS', M, wg.top - 18, `600 11px ${SANS}`, COLORS.softInk);
+    ctx.textAlign = 'right';
+    text(ctx, 'Tap a week to open it', W - M, wg.top - 18, `400 11px ${SANS}`, COLORS.softInk);
+    ctx.textAlign = 'left';
+    const today = P.todayISO();
+    P.cycleWeekRects(start).forEach((wr) => {
+      const ws = P.partsFor(wr.weekStart);
+      const we = P.partsFor(P.isoFromTs(Date.UTC(ws.year, ws.month, ws.day) + 6 * P.DAY_MS));
+      const weekEndISO = P.cycleDayISO(start, wr.week * 7 + 6);
+      const isNow = today >= wr.weekStart && today <= weekEndISO;
+      const cy = wr.y + wr.h / 2;
+      if (isNow) {
+        roundRect(ctx, wr.x - 8, wr.y + 3, wr.w + 16, wr.h - 6, 12);
+        ctx.fillStyle = COLORS.faint; ctx.fill();
+      }
+      text(ctx, 'Week', wr.x + 4, cy - 8, `600 11px ${SANS}`, COLORS.softInk, 'middle');
+      text(ctx, String(wr.week + 1), wr.x + 4, cy + 12, `700 22px ${SERIF}`, isNow ? COLORS.accent : COLORS.ink, 'middle');
+      text(ctx, `${ws.shortMonthDay} – ${we.shortMonthDay}`, wr.x + 74, cy, `500 17px ${SANS}`, COLORS.ink, 'middle');
+      if (isNow) {
+        ctx.textAlign = 'right';
+        text(ctx, 'THIS WEEK', W - M, cy, `700 11px ${SANS}`, COLORS.accent, 'middle');
+        ctx.textAlign = 'left';
+      }
+      hline(ctx, wr.x, wr.y + wr.h - 1, wr.w, COLORS.faint);
+    });
+  }
+
+  // ---- Five Foundations 12-week goal setting ----
+  // One page per calendar quarter in a year planner, or a single page for a
+  // 12-week cycle journal (labelled with the cycle's date range).
   const QUARTER_RANGES = ['January – March', 'April – June', 'July – September', 'October – December'];
   function goalsLayout() {
     const top = M + 190, secH = 196;
@@ -809,9 +871,16 @@ window.LJTemplates = (function () {
     text(ctx, 'FIVE FOUNDATIONS', M, M + 34, `700 12px ${SANS}`, COLORS.softInk);
     setLetterSpacing(ctx, 0);
     text(ctx, '12-Week Goals', M, M + 84, `600 40px ${SERIF}`, COLORS.ink);
-    const q = o.quarter == null ? 0 : o.quarter;
+    let rangeLabel;
+    if (o.startISO && window.LJPlanner) {
+      const a = LJPlanner.partsFor(o.startISO), b = LJPlanner.partsFor(LJPlanner.cycleEndISO(o.startISO));
+      rangeLabel = `${a.shortMonthDay} – ${b.shortMonthDay}, ${b.year}`;
+    } else {
+      const q = o.quarter == null ? 0 : o.quarter;
+      rangeLabel = `Quarter ${q + 1} · ${QUARTER_RANGES[q]}${o.year ? ' ' + o.year : ''}`;
+    }
     ctx.save(); ctx.textAlign = 'right';
-    text(ctx, `Quarter ${q + 1} · ${QUARTER_RANGES[q]}${o.year ? ' ' + o.year : ''}`, W - M, M + 84, `italic 17px ${SERIF}`, COLORS.softInk);
+    text(ctx, rangeLabel, W - M, M + 84, `italic 17px ${SERIF}`, COLORS.softInk);
     ctx.restore();
     caption(ctx, 'One measurable goal per foundation for the next twelve weeks — with why it matters and the first step.', M, M + 122);
     hline(ctx, M, M + 144, W - 2 * M, COLORS.rule);
@@ -891,7 +960,7 @@ window.LJTemplates = (function () {
   const DRAW = {
     cover, soap, sermonNotes, prayerList, gratitude, dailyPlanner,
     weeklyTop3, weeklySchedule, monthlyCalendar, notesTasks, lined, dotted, blank,
-    planYear, planMonth, planDay, planWeek, planWeekSermon,
+    planYear, planMonth, planDay, planWeek, planWeekSermon, planCycle,
     foundationsDaily, weeklyPrayer, weeklyFoundations, teachingNotes, foundationsGoals
   };
 

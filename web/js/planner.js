@@ -110,6 +110,62 @@ window.LJPlanner = (function () {
   // Tappable header on day / sermon pages → that month's calendar.
   function headerBackRect() { return { x: M, y: M, w: 360, h: 96 }; }
 
+  // ---- 12-week cycle ("12 Week Year") ----
+  // A cycle journal is anchored to a chosen start date; week N runs
+  // start + (N-1)*7 for 7 days, giving exactly 12*7 = 84 daily pages.
+  const CYCLE_WEEKS = 12;
+  const CYCLE_DAYS = CYCLE_WEEKS * 7;
+  function startTs(startISO) { const p = parseISO(startISO); return Date.UTC(p.y, p.m, p.d); }
+  function cycleWeekStartISO(startISO, w) { return isoFromTs(startTs(startISO) + w * 7 * DAY_MS); }
+  function cycleDayISO(startISO, day) { return isoFromTs(startTs(startISO) + day * DAY_MS); }
+  function cycleEndISO(startISO) { return isoFromTs(startTs(startISO) + (CYCLE_DAYS - 1) * DAY_MS); }
+  // Distinct calendar months (in order) the 84 days touch.
+  function cycleMonths(startISO) {
+    const base = startTs(startISO), out = [], seen = {};
+    for (let i = 0; i < CYCLE_DAYS; i++) {
+      const d = new Date(base + i * DAY_MS), y = d.getUTCFullYear(), m = d.getUTCMonth();
+      const k = y + '-' + m;
+      if (!seen[k]) { seen[k] = true; out.push({ year: y, month: m }); }
+    }
+    return out;
+  }
+  // Where "today" sits in the cycle, for the shelf badge and morning flow.
+  function cycleStatus(startISO, refISO) {
+    const ref = refISO || todayISO();
+    const days = Math.round((startTs(ref) - startTs(startISO)) / DAY_MS);
+    if (days < 0) return { state: 'before', startsInDays: -days, total: CYCLE_DAYS, weeks: CYCLE_WEEKS };
+    if (days >= CYCLE_DAYS) return { state: 'done', day: CYCLE_DAYS, week: CYCLE_WEEKS, total: CYCLE_DAYS, weeks: CYCLE_WEEKS };
+    return { state: 'active', day: days + 1, week: Math.floor(days / 7) + 1, total: CYCLE_DAYS, weeks: CYCLE_WEEKS };
+  }
+  // The weekStart of the cycle-week that contains `iso` (null if outside).
+  function cycleWeekStartOf(startISO, iso) {
+    const st = cycleStatus(startISO, iso);
+    return st.state === 'active' ? cycleWeekStartISO(startISO, st.week - 1) : null;
+  }
+
+  // Overview page geometry: a row of month chips + the twelve week rows.
+  function cycleMonthChipGeom() { return { y: M + 186, h: 62, gap: 14 }; }
+  function cycleMonthChipRects(startISO) {
+    const months = cycleMonths(startISO), g = cycleMonthChipGeom();
+    const n = months.length, totalW = PAGE.W - 2 * M;
+    const chipW = (totalW - (n - 1) * g.gap) / n;
+    return months.map((mm, i) => ({ year: mm.year, month: mm.month,
+      x: M + i * (chipW + g.gap), y: g.y, w: chipW, h: g.h }));
+  }
+  function cycleGoalsRect() { return { x: PAGE.W - M - 236, y: M + 34, w: 236, h: 46 }; }
+  function cycleWeekRowGeom() {
+    const top = M + 300, listH = PAGE.H - top - M;
+    return { top, rowH: listH / CYCLE_WEEKS };
+  }
+  function cycleWeekRects(startISO) {
+    const g = cycleWeekRowGeom(), out = [];
+    for (let w = 0; w < CYCLE_WEEKS; w++) {
+      out.push({ week: w, weekStart: cycleWeekStartISO(startISO, w),
+                 x: M, y: g.top + w * g.rowH, w: PAGE.W - 2 * M, h: g.rowH });
+    }
+    return out;
+  }
+
   // ---- Week view geometry ----
   function weekRowGeom() {
     const top = M + 132;
@@ -153,6 +209,32 @@ window.LJPlanner = (function () {
     return { id: uid(), title: `LifeJournal ${year}`, cover: 'navy', kind: 'planner', year: year, pver: 4, pages: pages };
   }
 
+  // Build a 12-week cycle journal anchored to `startISO`. Structure:
+  //   cover · overview · one 12-week goals page · the calendar months touched
+  //   · then per week (×12): week card + weekly Five Foundations + 7 daily pages.
+  function generateCycle(startISO, opts) {
+    opts = opts || {};
+    const uid = LJData.uid;
+    const base = startTs(startISO);
+    const pages = [
+      { id: uid(), template: 'cover' },
+      { id: uid(), template: 'planCycle', startISO: startISO },
+      { id: uid(), template: 'foundationsGoals', startISO: startISO }
+    ];
+    cycleMonths(startISO).forEach((mm) =>
+      pages.push({ id: uid(), template: 'planMonth', year: mm.year, month: mm.month }));
+    for (let w = 0; w < CYCLE_WEEKS; w++) {
+      const ws = isoFromTs(base + w * 7 * DAY_MS);
+      pages.push({ id: uid(), template: 'planWeek', weekStart: ws, cycleWeek: w });
+      pages.push({ id: uid(), template: 'weeklyFoundations', weekStart: ws, cycleWeek: w });
+      for (let i = 0; i < 7; i++) pages.push({ id: uid(), template: 'planDay', date: isoFromTs(base + (w * 7 + i) * DAY_MS) });
+    }
+    return {
+      id: uid(), title: opts.title || 'My 12-Week Journal', cover: opts.cover || 'terracotta',
+      kind: 'planner', cycle: true, startISO: startISO, weeks: CYCLE_WEEKS, cver: 1, pages: pages
+    };
+  }
+
   // Upgrade older planners in place so existing pages (and their handwriting)
   // are preserved. Each step is additive and runs in sequence:
   //   pver 1 → 2: add a week-overview page before each week's sermon page.
@@ -160,6 +242,9 @@ window.LJPlanner = (function () {
   // Returns true if the journal changed.
   function migrate(journal) {
     if (journal.kind !== 'planner') return false;
+    // 12-week cycle journals are versioned separately (cver) and don't take
+    // the calendar-year (pver) migrations below.
+    if (journal.cycle) return false;
     let changed = false;
     const pver = journal.pver || 1;
 
@@ -207,6 +292,9 @@ window.LJPlanner = (function () {
     monthPhotoRect, defaultPhotoURL, fallbackPhotoURL,
     yearGeom, yearMonthRects, headerBackRect,
     weekRowGeom, weekDayRects, todayISO,
-    generate, migrate
+    CYCLE_WEEKS, CYCLE_DAYS,
+    cycleWeekStartISO, cycleDayISO, cycleEndISO, cycleMonths, cycleStatus, cycleWeekStartOf,
+    cycleMonthChipGeom, cycleMonthChipRects, cycleGoalsRect, cycleWeekRowGeom, cycleWeekRects,
+    generate, generateCycle, migrate
   };
 })();

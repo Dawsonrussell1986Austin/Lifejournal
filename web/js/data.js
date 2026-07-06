@@ -53,7 +53,7 @@ window.LJData = (function () {
     monthlyCalendar: { name: 'Monthly Calendar',         sub: 'A full month grid' },
     notesTasks:      { name: 'Notes / Tasks',            sub: 'Open notes with a task column' },
     foundationsDaily:{ name: 'Foundations Daily',        sub: 'Thankful · schedule · top 3 · daily steps' },
-    foundationsGoals:{ name: '12-Week Goals',            sub: 'A quarterly goal for each foundation' },
+    foundationsGoals:{ name: '12-Week Goals',            sub: 'One goal per foundation for the cycle' },
     weeklyPrayer:    { name: 'Weekly Prayer Journal',    sub: '90-day prayer · weekly focus · provision' },
     weeklyFoundations:{ name: 'Weekly Five Foundations', sub: 'Goals · progress · prayer · habit tracking' },
     teachingNotes:   { name: 'Teaching Notes',           sub: 'Sermon / teaching / podcast notes' },
@@ -61,6 +61,7 @@ window.LJData = (function () {
     dotted:          { name: 'Dotted',                   sub: 'Dot grid for free-form layout' },
     blank:           { name: 'Blank',                    sub: 'A clean blank page' },
     // Planner pages (auto-generated in LifeJournal 2026)
+    planCycle:       { name: '12-Week Overview',         sub: 'The twelve weeks at a glance' },
     planYear:        { name: 'Year Overview',            sub: 'The whole year at a glance' },
     planMonth:       { name: 'Month',                    sub: 'Monthly calendar' },
     planWeek:        { name: 'Week',                     sub: 'A week at a glance' },

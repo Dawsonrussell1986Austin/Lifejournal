@@ -411,6 +411,8 @@ body[data-theme="ink"] .toolbar { background: #1c2330; border: 1px solid #262e3c
 .field-label { display: block; font-size: 12px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--soft-ink); margin: 16px 0 6px; }
 .text-input { width: 100%; padding: 11px 12px; border: 1px solid var(--rule); border-radius: 12px; font-size: 15px; font-family: inherit; background: var(--input-bg); color: var(--ink); }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+.nj-intro { margin: 4px 0 4px; color: var(--soft-ink); font-size: 14px; line-height: 1.5; }
+.nj-range { margin: 8px 0 0; color: var(--accent); font-size: 13px; font-weight: 600; min-height: 18px; }
 
 .cover-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .cover-swatch { height: 60px; border-radius: 12px; cursor: pointer; border: 3px solid transparent; position: relative; }

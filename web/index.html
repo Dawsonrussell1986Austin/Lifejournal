@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#b5623f" />
   <title>Life Journal</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%23b5623f'/%3E%3Ctext x='8' y='12' font-size='11' text-anchor='middle' fill='%23f4f1e8'%3E%E2%9C%9D%3C/text%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="styles.css?v=28" />
+  <link rel="stylesheet" href="styles.css?v=29" />
 </head>
 <body>
   <!-- Library / shelf -->
@@ -195,16 +195,18 @@
   <!-- New journal modal -->
   <div id="newJournalModal" class="modal hidden">
     <div class="modal-card">
-      <h2>New Journal</h2>
+      <h2>New 12-Week Journal</h2>
+      <p class="nj-intro">A focused twelve-week cycle — 12 weeks, 84 days, and one set of Five Foundations goals. Small enough to finish, easy to begin again.</p>
       <label class="field-label">Title</label>
-      <input id="njTitle" class="text-input" type="text" placeholder="My Life Journal" />
+      <input id="njTitle" class="text-input" type="text" placeholder="My 12-Week Journal" />
+      <label class="field-label">Start date</label>
+      <input id="njStart" class="text-input" type="date" />
+      <p id="njRange" class="nj-range"></p>
       <label class="field-label">Cover</label>
       <div id="njCovers" class="cover-grid"></div>
-      <label class="field-label">Start with a page</label>
-      <select id="njTemplate" class="text-input"></select>
       <div class="modal-actions">
         <button id="njCancel" class="btn">Cancel</button>
-        <button id="njCreate" class="btn primary">Create</button>
+        <button id="njCreate" class="btn primary">Create journal</button>
       </div>
     </div>
   </div>
@@ -259,17 +261,17 @@
 
   <div id="toast" class="toast hidden"></div>
 
-  <script src="js/data.js?v=28"></script>
-  <script src="js/bible.js?v=28"></script>
-  <script src="js/storage.js?v=28"></script>
-  <script src="js/templates.js?v=28"></script>
-  <script src="js/planner.js?v=28"></script>
-  <script src="js/store.js?v=28"></script>
-  <script src="js/canvas.js?v=28"></script>
-  <script src="js/pdf.js?v=28"></script>
-  <script src="js/sync.js?v=28"></script>
-  <script src="js/iap.js?v=28"></script>
-  <script src="js/native.js?v=28"></script>
-  <script src="js/app.js?v=28"></script>
+  <script src="js/data.js?v=29"></script>
+  <script src="js/bible.js?v=29"></script>
+  <script src="js/storage.js?v=29"></script>
+  <script src="js/templates.js?v=29"></script>
+  <script src="js/planner.js?v=29"></script>
+  <script src="js/store.js?v=29"></script>
+  <script src="js/canvas.js?v=29"></script>
+  <script src="js/pdf.js?v=29"></script>
+  <script src="js/sync.js?v=29"></script>
+  <script src="js/iap.js?v=29"></script>
+  <script src="js/native.js?v=29"></script>
+  <script src="js/app.js?v=29"></script>
 </body>
 </html>

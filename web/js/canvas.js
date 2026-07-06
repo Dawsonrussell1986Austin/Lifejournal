@@ -339,7 +339,8 @@ window.JournalCanvas = (function () {
     return {
       title: journal.title, cover: journal.cover, tint: cv.vivid || cv.c1,
       paper: page.paper || journal.paper || 'white',
-      year: page.year, month: page.month, date: page.date, weekStart: page.weekStart, quarter: page.quarter
+      year: page.year, month: page.month, date: page.date, weekStart: page.weekStart, quarter: page.quarter,
+      startISO: page.startISO, cycleWeek: page.cycleWeek
     };
   }
 

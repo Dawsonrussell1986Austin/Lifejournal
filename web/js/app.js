@@ -64,10 +64,25 @@
       const cv = LJData.COVERS[j.cover] || LJData.COVERS.sage;
       const tile = el('div', 'journal-tile');
       const isPlanner = j.kind === 'planner';
-      const count = isPlanner
-        ? `${j.pages.length} pages · Day ${doy}`
-        : `${j.pages.length} page${j.pages.length === 1 ? '' : 's'}`;
-      const prog = Math.min(100, Math.round(doy / 365 * 100));
+      let count, prog = 0, progLabel = '';
+      if (j.cycle && window.LJPlanner) {
+        const st = LJPlanner.cycleStatus(j.startISO);
+        if (st.state === 'before') {
+          count = `Starts in ${st.startsInDays} day${st.startsInDays === 1 ? '' : 's'}`;
+          prog = 0; progLabel = 'Week 1 of 12';
+        } else if (st.state === 'done') {
+          count = 'Complete · 12 weeks'; prog = 100; progLabel = 'Day 84 of 84';
+        } else {
+          count = `Week ${st.week} of 12 · Day ${st.day} of 84`;
+          prog = Math.round(st.day / st.total * 100); progLabel = `Day ${st.day} of 84`;
+        }
+      } else if (isPlanner) {
+        count = `${j.pages.length} pages · Day ${doy}`;
+        prog = Math.min(100, Math.round(doy / 365 * 100));
+        progLabel = `Day ${doy} of 365`;
+      } else {
+        count = `${j.pages.length} page${j.pages.length === 1 ? '' : 's'}`;
+      }
       tile.innerHTML = `<div class="jcard" style="--c1:${cv.c1};--c2:${cv.c2 || cv.c1};--band:${cv.band || 'transparent'};--prog:${prog}%">
           ${isPlanner ? '<div class="jcard-band"></div>' : ''}
           <div class="jcard-top">
@@ -78,7 +93,7 @@
           </div>
           <div class="jcard-title">${escapeHtml(j.title)}</div>
           <div class="jcard-count">${count}</div>
-          ${isPlanner ? `<div class="jcard-progress"><div class="bar"><i></i></div><span class="jp-day">Day ${doy} of 365</span></div>` : ''}
+          ${isPlanner ? `<div class="jcard-progress"><div class="bar"><i></i></div><span class="jp-day">${progLabel}</span></div>` : ''}
         </div>`;
       tile.querySelector('.jcard-del').onclick = (e) => { e.stopPropagation(); deleteJournal(j.id); };
       tile.onclick = () => openJournal(j.id);
@@ -121,25 +136,27 @@
       };
       grid.appendChild(sw);
     });
-    const sel = $('#njTemplate');
-    sel.innerHTML = '';
-    LJData.INSERTABLE.forEach((t) => {
-      const o = el('option');
-      o.value = t; o.textContent = LJData.TEMPLATES[t].name;
-      sel.appendChild(o);
-    });
-    sel.value = 'soap';
+    const startInput = $('#njStart');
+    if (startInput) startInput.value = window.LJPlanner ? LJPlanner.todayISO() : '';
+    updateNjRange();
     $('#newJournalModal').classList.remove('hidden');
   }
 
+  // Live "12 weeks · start → end (months)" preview under the date picker.
+  function updateNjRange() {
+    const out = $('#njRange');
+    if (!out || !window.LJPlanner) return;
+    const s = ($('#njStart') && $('#njStart').value) || '';
+    if (!s) { out.textContent = ''; return; }
+    const a = LJPlanner.partsFor(s), b = LJPlanner.partsFor(LJPlanner.cycleEndISO(s));
+    const months = LJPlanner.cycleMonths(s).map((m) => LJPlanner.MONTHS[m.month].slice(0, 3)).join(' · ');
+    out.textContent = `12 weeks · ${a.long} → ${b.long}  (${months})`;
+  }
+
   function createJournal() {
-    const title = ($('#njTitle').value || '').trim() || 'Untitled Journal';
-    const first = $('#njTemplate').value;
-    const journal = {
-      id: LJData.uid(), title, cover: state.njCover,
-      pages: [{ id: LJData.uid(), template: 'cover' }]
-    };
-    if (first && first !== 'cover') journal.pages.push({ id: LJData.uid(), template: first });
+    const title = ($('#njTitle').value || '').trim() || 'My 12-Week Journal';
+    const startISO = ($('#njStart') && $('#njStart').value) || (window.LJPlanner ? LJPlanner.todayISO() : '');
+    const journal = LJPlanner.generateCycle(startISO, { title, cover: state.njCover });
     state.lib.journals.unshift(journal);
     LJStore.saveLibrary(state.lib);
     $('#newJournalModal').classList.add('hidden');
@@ -149,22 +166,25 @@
 
   // ---------- Editor ----------
   function buildPlannerIndex() {
-    state.dateIndex = {}; state.monthIndex = {}; state.yearPageIndex = -1; state.goalsIndex = {};
+    state.dateIndex = {}; state.monthIndex = {}; state.yearPageIndex = -1; state.goalsIndex = {}; state.weekIndex = {};
     if (!state.journal) return;
     state.journal.pages.forEach((p, i) => {
       if (p.date) state.dateIndex[p.date] = i;
+      if (p.template === 'planWeek' && p.weekStart) state.weekIndex[p.weekStart] = i;
       if (p.template === 'planMonth') state.monthIndex[p.month] = i;
-      if (p.template === 'planYear') state.yearPageIndex = i;
-      if (p.template === 'foundationsGoals' && p.quarter != null) state.goalsIndex[p.quarter] = i;
+      if (p.template === 'planYear' || p.template === 'planCycle') state.yearPageIndex = i;
+      if (p.template === 'foundationsGoals') state.goalsIndex[p.quarter != null ? p.quarter : 'cycle'] = i;
     });
   }
   function goToGoals() {
+    if (state.goalsIndex.cycle != null) return loadPage(state.goalsIndex.cycle);
     const q = Math.floor(new Date().getMonth() / 3);
     const i = state.goalsIndex[q] != null ? state.goalsIndex[q] : state.goalsIndex[0];
     if (i != null) loadPage(i);
     else toast('No goals pages in this journal — add one from ＋ Page');
   }
   function goToDate(ds) { const i = state.dateIndex[ds]; if (i != null) loadPage(i); }
+  function goToWeek(ws) { const i = state.weekIndex[ws]; if (i != null) loadPage(i); else goToDate(ws); }
   function goToMonth(m) { const i = state.monthIndex[m]; if (i != null) loadPage(i); }
   function goToYear() { if (state.yearPageIndex >= 0) loadPage(state.yearPageIndex); }
 
@@ -506,7 +526,8 @@
       return `${p.shortMonthDay} · ${p.weekdayName.slice(0, 3)}`;
     }
     if (page.template === 'planMonth') return `${LJPlanner.MONTHS[page.month]} ${page.year}`;
-    if (page.template === 'foundationsGoals' && page.quarter != null) return `Q${page.quarter + 1} · 12-Week Goals`;
+    if (page.template === 'foundationsGoals') return page.quarter != null ? `Q${page.quarter + 1} · 12-Week Goals` : '12-Week Goals';
+    if (page.template === 'planCycle') return '12-Week Overview';
     if (page.template === 'planYear') return `${page.year} Overview`;
     if (page.template === 'planWeek' && page.weekStart) {
       const p = LJPlanner.partsFor(page.weekStart);
@@ -684,13 +705,21 @@
     if (yp) { const d = LJStore.loadPageData(yp.id); yFields = d.fields || {}; yChecks = d.checks || {}; ypage = yp; }
     const yRef = window.LJBible ? LJBible.parseRef(yFields.scr0 || '') : null;
 
-    // Current quarter goals + this week's commitments (Five Foundations)
-    const q = p.m ? Math.floor(p.m / 3) : Math.floor(new Date().getMonth() / 3);
-    const gp = planner.pages.find((pg) => pg.template === 'foundationsGoals' && pg.quarter === q);
+    // Goals for the Five Foundations: a 12-week cycle has a single goals page;
+    // a year planner has one per quarter — pick the current quarter's.
+    const q = Math.floor(p.m / 3);
+    const gp = planner.cycle
+      ? planner.pages.find((pg) => pg.template === 'foundationsGoals')
+      : planner.pages.find((pg) => pg.template === 'foundationsGoals' && pg.quarter === q);
     const goals = gp ? (LJStore.loadPageData(gp.id).fields || {}) : {};
-    const wd = new Date(todayTs).getUTCDay();
-    const weekStart = LJPlanner.isoFromTs(todayTs - wd * LJPlanner.DAY_MS);
-    const wp = planner.pages.find((pg) => pg.template === 'weeklyFoundations' && pg.weekStart === weekStart);
+    // This week's commitments: the weeklyFoundations page whose 7-day span
+    // contains today (works for both Sunday-based years and cycle weeks).
+    const wp = planner.pages.find((pg) => {
+      if (pg.template !== 'weeklyFoundations' || !pg.weekStart) return false;
+      const wp0 = LJPlanner.parseISO(pg.weekStart);
+      const ws0 = Date.UTC(wp0.y, wp0.m, wp0.d);
+      return todayTs >= ws0 && todayTs < ws0 + 7 * LJPlanner.DAY_MS;
+    });
     const weekly = wp ? (LJStore.loadPageData(wp.id).fields || {}) : {};
 
     return { yIso, ypage, yFields, yChecks, yRef, suggestion: yRef ? nextChapterAfter(yRef) : null, goals, weekly };
@@ -1027,6 +1056,21 @@
 
   // ---------- Desktop sidebar (Five Foundations chips + day footer) ----------
   const SIDE_FND = ['FAITH', 'FAMILY', 'FINANCES', 'FITNESS', 'FOCUS'];
+  // Progress label + percent for the current planner: cycle journals count
+  // toward their 84 days; older year planners count toward 365.
+  function planProgress() {
+    const j = state.journal;
+    if (j && j.cycle && window.LJPlanner) {
+      const st = LJPlanner.cycleStatus(j.startISO);
+      const prog = st.state === 'done' ? 100 : st.state === 'before' ? 0 : Math.round(st.day / st.total * 100);
+      const label = st.state === 'before' ? `Starts in ${st.startsInDays} day${st.startsInDays === 1 ? '' : 's'}`
+        : st.state === 'done' ? 'Complete · 12 weeks'
+        : `Week ${st.week} of 12 · Day ${st.day} of 84`;
+      return { prog, label };
+    }
+    const doy = dayOfYear(new Date());
+    return { prog: Math.min(100, Math.round(doy / 365 * 100)), label: `Day ${doy} of 365` };
+  }
   function renderSideChips() {
     const box = $('#sideChips');
     if (!box) return;
@@ -1042,9 +1086,9 @@
     if (state.theme === 'ink') {
       // Ink & Glass sidebar shows the year progress bar (per the mock)
       if (sideLabel) sideLabel.textContent = 'Progress';
-      const doyNow = dayOfYear(new Date());
-      box.innerHTML = `<div class="side-prog"><i style="width:${Math.min(100, Math.round(doyNow / 365 * 100))}%"></i></div>`;
-      sideDay.innerHTML = `Day ${doyNow} of 365`;
+      const pp = planProgress();
+      box.innerHTML = `<div class="side-prog"><i style="width:${pp.prog}%"></i></div>`;
+      sideDay.innerHTML = pp.label;
       return;
     }
     if (sideLabel) sideLabel.textContent = 'Five Foundations';
@@ -1067,13 +1111,12 @@
       };
       box.appendChild(b);
     });
-    const doy = dayOfYear(new Date());
     let onPace = false;
     if (today) {
       const d = onToday ? pageData() : LJStore.loadPageData(today.id);
       onPace = (d.strokes && d.strokes.length > 0) || Object.keys(d.fields || {}).length > 0 || Object.keys(d.checks || {}).length > 0;
     }
-    sideDay.innerHTML = `Day ${doy} of 365${onPace ? ' · <b>On pace</b>' : ''}`;
+    sideDay.innerHTML = `${planProgress().label}${onPace ? ' · <b>On pace</b>' : ''}`;
   }
 
   // ---------- AI Bible study ----------
@@ -1484,7 +1527,13 @@
       layer.appendChild(b);
     };
 
-    if (page.template === 'planYear') {
+    if (page.template === 'planCycle' && page.startISO) {
+      add(LJPlanner.cycleGoalsRect(), goToGoals, '12-week goals');
+      LJPlanner.cycleMonthChipRects(page.startISO).forEach((mr) =>
+        add(mr, () => goToMonth(mr.month), LJPlanner.MONTHS[mr.month]));
+      LJPlanner.cycleWeekRects(page.startISO).forEach((wr) =>
+        add(wr, () => goToWeek(wr.weekStart), 'Week ' + (wr.week + 1)));
+    } else if (page.template === 'planYear') {
       LJPlanner.yearMonthRects().forEach((mr) =>
         add(mr, () => goToMonth(mr.month), LJPlanner.MONTHS[mr.month]));
     } else if (page.template === 'planMonth') {
@@ -1992,6 +2041,7 @@
     };
     $('#njCancel').onclick = () => $('#newJournalModal').classList.add('hidden');
     $('#njCreate').onclick = createJournal;
+    if ($('#njStart')) $('#njStart').oninput = updateNjRange;
 
     $('#backBtn').onclick = backToLibrary;
     $('#prevPageBtn').onclick = () => loadPage(state.pageIndex - 1);
