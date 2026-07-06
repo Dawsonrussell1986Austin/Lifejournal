@@ -639,6 +639,9 @@ body[data-theme="ink"] .mf-card { box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5); }
 .mf-sched { display: grid; grid-template-columns: 1fr 1fr; column-gap: 26px; }
 .mf-sched-row { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--faint); }
 .mf-sched-in { font-size: 15px; padding: 7px 0; }
+.mf-fnd-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.mf-again { border: none; background: none; cursor: pointer; color: var(--accent); font-size: 12px; font-weight: 700; white-space: nowrap; padding: 0; }
+.mf-again:hover { text-decoration: underline; }
 .mf-fnd { padding: 10px 0 6px; border-bottom: 1px solid var(--faint); }
 .mf-fnd:last-child { border-bottom: none; }
 .mf-fnd-name { font-size: 12px; font-weight: 800; letter-spacing: 1.5px; color: var(--accent); }

@@ -925,9 +925,11 @@
     const cyc = planner.cycle && window.LJPlanner ? LJPlanner.cycleStatus(planner.startISO, iso) : null;
     flow.planner = planner; flow.tp = tp; flow.iso = iso; flow.ctx = ctx; flow.cyc = cyc;
     flow.fromJournal = !!fromJournal;
-    // Seed each foundation's "Today I will…" from this week's commitment so
-    // the daily tasks ladder up to the week's plan (editable).
+    flow.todaySuggested = false;
+    // Baseline each foundation's "Today I will…" with this week's commitment;
+    // loadTodaySuggestions() upgrades these to a specific action for today.
     const seededSteps = SIDE_FND.map((_, i) => (cyc ? (ctx.weekly['goal' + i] || '') : ''));
+    flow.seededSteps = seededSteps.slice();
     flow.data = {
       reviewChecks: Object.assign({}, ctx.yChecks),
       reviewNote: '', thank: '', tops: ['', '', ''], scr: '', journal: '', prayer: '',
@@ -952,7 +954,42 @@
     $('#library').classList.add('hidden');
     $('#morningFlow').classList.remove('hidden');
     renderFlowStep();
+    loadTodaySuggestions();      // fire-and-forget; upgrades the foundations step
     return true;
+  }
+
+  // Ask LifeJournal for one concrete action per foundation for TODAY, derived
+  // from this week's plan. Prefills the "Today I will…" inputs (editable), and
+  // falls back to the weekly commitment if unavailable. Cached per day.
+  async function loadTodaySuggestions(force) {
+    const cyc = flow.cyc, ctx = flow.ctx, d = flow.data;
+    if (!cyc || cyc.state !== 'active' || !ctx) return;
+    const items = SIDE_FND.map((name, i) => ({
+      foundation: name, goal: ctx.goals['g' + i + 'goal'] || '', week: ctx.weekly['goal' + i] || ''
+    }));
+    if (!items.some((it) => it.week || it.goal)) return;   // no plan set yet
+    const cacheKey = 'lifejournal.today.' + flow.iso;
+    if (force) LJKV.remove(cacheKey);
+    let tasks = null;
+    const cached = force ? null : LJKV.get(cacheKey);
+    if (cached) { try { tasks = JSON.parse(cached); } catch (e) {} }
+    if (!tasks) {
+      try {
+        const r = await fetch('/api/today', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items, weekday: new Date().toLocaleDateString(undefined, { weekday: 'long' }), week: cyc.week })
+        });
+        const j = await r.json();
+        if (r.ok && Array.isArray(j.tasks)) { tasks = j.tasks; LJKV.set(cacheKey, JSON.stringify(tasks)); }
+      } catch (e) { /* offline / not configured — keep the weekly baseline */ }
+    }
+    if (!tasks) return;
+    // Only replace values the user hasn't edited (still equal to the baseline).
+    SIDE_FND.forEach((_, i) => {
+      if (tasks[i] && (!d.steps[i] || d.steps[i] === flow.seededSteps[i])) d.steps[i] = tasks[i];
+    });
+    flow.todaySuggested = true;
+    if (flow.steps[flow.step] === 'foundations') renderFlowStep();
   }
 
   function mfLabel(text) { return el('div', 'mf-label', text); }
@@ -1097,7 +1134,17 @@
         });
       }
     } else if (kind === 'foundations') {
-      body.appendChild(mfLabel('Five Foundations — what will you do today?'));
+      const anyPlan = SIDE_FND.some((_, i) => flow.ctx.weekly['goal' + i] || flow.ctx.goals['g' + i + 'goal']);
+      const head = el('div', 'mf-fnd-head');
+      head.appendChild(mfLabel(flow.todaySuggested
+        ? 'Five Foundations — here’s a suggestion for each today. Edit anything.'
+        : 'Five Foundations — what will you do today?'));
+      if (anyPlan) {
+        const again = el('button', 'mf-again', '↻ Suggest again');
+        again.onclick = () => { SIDE_FND.forEach((_, i) => { if (d.steps[i] === flow.seededSteps[i] || flow.todaySuggested) d.steps[i] = flow.seededSteps[i]; }); loadTodaySuggestions(true); };
+        head.appendChild(again);
+      }
+      body.appendChild(head);
       SIDE_FND.forEach((name, i) => {
         const sec = el('div', 'mf-fnd');
         sec.appendChild(el('div', 'mf-fnd-name', name));
