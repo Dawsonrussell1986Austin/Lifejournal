@@ -316,6 +316,9 @@
       d.fields['goal' + fi] = wk;
       LJStore.savePageData(wfPages[k].id, d);
     });
+    // A new plan exists — let the daily card re-suggest today's actions.
+    state.mobTodayFetched = null; state.mobSuggested = null;
+    LJKV.remove('lifejournal.today.' + LJPlanner.todayISO());
     scheduleAutoSync();
   }
 
@@ -364,6 +367,7 @@
     // Opening the planner starts the daily flow if it hasn't run today.
     if (!skipFlow && j.kind === 'planner' && maybeMorningFlow(j, true)) return;
     state.journal = j;
+    state.mobTodayFetched = null;      // re-evaluate daily suggestions for this journal
     buildPlannerIndex();
     state.pageIndex = 0;
     $('#library').classList.add('hidden');
@@ -958,33 +962,61 @@
     return true;
   }
 
-  // Ask LifeJournal for one concrete action per foundation for TODAY, derived
-  // from this week's plan. Prefills the "Today I will…" inputs (editable), and
-  // falls back to the weekly commitment if unavailable. Cached per day.
-  async function loadTodaySuggestions(force) {
-    const cyc = flow.cyc, ctx = flow.ctx, d = flow.data;
-    if (!cyc || cyc.state !== 'active' || !ctx) return;
-    const items = SIDE_FND.map((name, i) => ({
-      foundation: name, goal: ctx.goals['g' + i + 'goal'] || '', week: ctx.weekly['goal' + i] || ''
-    }));
-    if (!items.some((it) => it.week || it.goal)) return;   // no plan set yet
-    const cacheKey = 'lifejournal.today.' + flow.iso;
+  // Gather a journal's Five Foundations plan for a given date: each
+  // foundation's 12-week goal (from its blueprint) + this week's commitment
+  // (from the weeklyFoundations page whose 7-day span contains the date).
+  function foundationPlanContext(journal, iso) {
+    const goals = {}, weekly = {};
+    if (!journal || !window.LJPlanner) return { goals, weekly };
+    const p = LJPlanner.parseISO(iso), ts = Date.UTC(p.y, p.m, p.d);
+    LJData.FOUNDATIONS.forEach((F, i) => {
+      const bp = journal.pages.find((pg) => pg.template === 'foundationBlueprint' && pg.foundation === i);
+      if (!bp) return;
+      const bd = LJStore.loadPageData(bp.id).fields || {};
+      const what = [bd.what0, bd.what1].filter((v) => v && v.trim()).join(' ').trim();
+      if (what) goals['g' + i + 'goal'] = what;
+    });
+    const wp = journal.pages.find((pg) => {
+      if (pg.template !== 'weeklyFoundations' || !pg.weekStart) return false;
+      const w = LJPlanner.parseISO(pg.weekStart), ws = Date.UTC(w.y, w.m, w.d);
+      return ts >= ws && ts < ws + 7 * LJPlanner.DAY_MS;
+    });
+    if (wp) { const wd = LJStore.loadPageData(wp.id).fields || {}; for (let i = 0; i < 5; i++) if (wd['goal' + i]) weekly['goal' + i] = wd['goal' + i]; }
+    return { goals, weekly };
+  }
+
+  // One concrete action per foundation for a given date, from that date's
+  // plan. Cached per day; returns null when there's no plan or it's offline.
+  async function fetchTodayTasks(journal, iso, force) {
+    if (!journal || !journal.cycle || !window.LJPlanner) return null;
+    const st = LJPlanner.cycleStatus(journal.startISO, iso);
+    if (st.state !== 'active') return null;
+    const ctx = foundationPlanContext(journal, iso);
+    const items = SIDE_FND.map((name, i) => ({ foundation: name, goal: ctx.goals['g' + i + 'goal'] || '', week: ctx.weekly['goal' + i] || '' }));
+    if (!items.some((it) => it.week || it.goal)) return null;
+    const cacheKey = 'lifejournal.today.' + iso;
     if (force) LJKV.remove(cacheKey);
-    let tasks = null;
     const cached = force ? null : LJKV.get(cacheKey);
-    if (cached) { try { tasks = JSON.parse(cached); } catch (e) {} }
-    if (!tasks) {
-      try {
-        const r = await fetch('/api/today', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ items, weekday: new Date().toLocaleDateString(undefined, { weekday: 'long' }), week: cyc.week })
-        });
-        const j = await r.json();
-        if (r.ok && Array.isArray(j.tasks)) { tasks = j.tasks; LJKV.set(cacheKey, JSON.stringify(tasks)); }
-      } catch (e) { /* offline / not configured — keep the weekly baseline */ }
-    }
+    if (cached) { try { return JSON.parse(cached); } catch (e) {} }
+    try {
+      const wd = new Date(iso + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long' });
+      const r = await fetch('/api/today', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items, weekday: wd, week: st.week })
+      });
+      const j = await r.json();
+      if (r.ok && Array.isArray(j.tasks)) { LJKV.set(cacheKey, JSON.stringify(j.tasks)); return j.tasks; }
+    } catch (e) { /* offline / not configured */ }
+    return null;
+  }
+
+  // Morning-flow wrapper: prefill each "Today I will…" (editable), keeping the
+  // weekly commitment as the baseline until today's suggestions arrive.
+  async function loadTodaySuggestions(force) {
+    const cyc = flow.cyc, d = flow.data;
+    if (!cyc || cyc.state !== 'active') return;
+    const tasks = await fetchTodayTasks(flow.planner, flow.iso, force);
     if (!tasks) return;
-    // Only replace values the user hasn't edited (still equal to the baseline).
     SIDE_FND.forEach((_, i) => {
       if (tasks[i] && (!d.steps[i] || d.steps[i] === flow.seededSteps[i])) d.steps[i] = tasks[i];
     });
@@ -1604,6 +1636,21 @@
     });
   }
 
+  // Fill the daily page's per-foundation actions from today's plan. Replaces
+  // empty fields and prior auto-suggestions; never overwrites what you typed.
+  async function suggestMobileFoundations(page, force) {
+    const prev = (state.mobSuggested && state.mobSuggested.iso === page.date) ? state.mobSuggested.tasks : [];
+    const tasks = await fetchTodayTasks(state.journal, page.date, force);
+    if (!tasks || currentPage() !== page) return;
+    let changed = false;
+    SIDE_FND.forEach((_, i) => {
+      const cur = (state.fields['step' + i] || '').trim();
+      if (tasks[i] && (!cur || cur === (prev[i] || ''))) { state.fields['step' + i] = tasks[i]; changed = true; }
+    });
+    state.mobSuggested = { iso: page.date, tasks: tasks };
+    if (changed) { recordChange(); saveCurrentDebounced(); renderMobileDay(); }
+  }
+
   function renderMobileDay() {
     const wrap = $('#mobileDay');
     if (!wrap) return;
@@ -1680,6 +1727,29 @@
       chips.appendChild(c);
     });
     wrap.appendChild(chips);
+
+    // Five Foundations — one action for today per foundation (from the plan).
+    if (state.journal.cycle && window.LJPlanner) {
+      const fcard = el('div', 'm-card');
+      const fhead = el('div', 'm-label m-sched-head', 'Five Foundations · today');
+      const sug = el('button', 'm-expand', '↻ Suggest');
+      sug.onclick = () => suggestMobileFoundations(page, true);
+      fhead.appendChild(sug);
+      fcard.appendChild(fhead);
+      SIDE_FND.forEach((lab, i) => {
+        const row = el('div', 'm-fnd-row');
+        row.appendChild(el('span', 'm-fnd-lab', lab));
+        row.appendChild(mobField('step' + i, 'm-fnd-in', 'Today I will…'));
+        fcard.appendChild(row);
+      });
+      wrap.appendChild(fcard);
+      // Auto-suggest once per day when there's a plan and nothing filled yet.
+      const anyStep = SIDE_FND.some((_, i) => (state.fields['step' + i] || '').trim());
+      if (!anyStep && state.mobTodayFetched !== page.date) {
+        state.mobTodayFetched = page.date;
+        suggestMobileFoundations(page, false);
+      }
+    }
 
     // schedule card — condensed: filled hours + the current hour; expandable
     const sched = el('div', 'm-card');
