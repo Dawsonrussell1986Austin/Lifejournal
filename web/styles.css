@@ -9,8 +9,8 @@
   --soft-ink: #8a8478;
   --rule: #d8d2c4;
   --faint: #e7e2d5;
-  --accent: #2f4a3b;
-  --accent-hover: #263d30;
+  --accent: #b5623f;
+  --accent-hover: #9d5236;
   --red: #db4a33;
   --paper: #f7f3ea;
   --bg: #e9e7e2;
@@ -23,7 +23,7 @@
   --page-shadow: 0 12px 34px rgba(38, 36, 31, 0.16);
   --modal-bg: #fbf8f1;
   --input-bg: #ffffff;
-  --hover: rgba(47, 74, 59, 0.08);
+  --hover: rgba(181, 98, 63, 0.08);
 }
 body[data-theme="ink"] {
   --ink: #e8ecf2;

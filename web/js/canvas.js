@@ -304,13 +304,13 @@ window.JournalCanvas = (function () {
     if (!checks) return;
     const rects = LJTemplates.checkRects(template) || [];
     ctx.save();
-    ctx.strokeStyle = '#4a5f50';
+    ctx.strokeStyle = LJData.COLORS.accent;
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     for (const r of rects) {
       if (!checks[r.id]) continue;
       if (r.kind === 'pill') {
         // filled pill with its label in white (matches the on-screen chip)
-        ctx.fillStyle = '#2f4a3b';
+        ctx.fillStyle = LJData.COLORS.accent;
         ctx.beginPath();
         const rr = r.h / 2;
         ctx.roundRect ? ctx.roundRect(r.x, r.y, r.w, r.h, rr) : ctx.rect(r.x, r.y, r.w, r.h);
