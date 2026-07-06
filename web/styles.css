@@ -531,6 +531,21 @@ body[data-theme="ink"] .m-suggest { background: #12161e; }
   padding: 10px 16px; align-self: flex-start;
 }
 .m-study:active { background: var(--accent-hover); }
+.m-ai-plan {
+  border: none; cursor: pointer; border-radius: 999px; width: 100%;
+  background: var(--accent); color: #fff; font-size: 15px; font-weight: 700;
+  padding: 14px 16px; margin: 4px 0 2px;
+}
+.m-ai-plan:active { background: var(--accent-hover); }
+.m-verse { font-family: var(--serif); font-style: italic; font-size: 16px; line-height: 1.5; color: var(--ink); }
+.m-verse-ref { font-size: 12px; font-weight: 700; color: var(--accent); margin-top: 8px; }
+.m-intro { font-size: 14px; line-height: 1.55; color: var(--soft-ink); margin: 2px 2px 4px; }
+.m-q { font-size: 13px; color: var(--soft-ink); margin-bottom: 8px; }
+.m-bp-ta {
+  width: 100%; border: none; outline: none; resize: none; background: transparent;
+  font-family: var(--serif); font-size: 17px; line-height: 1.5; color: var(--ink);
+  border-bottom: 1px solid var(--rule); padding: 2px 0 8px;
+}
 
 /* Desktop study button on the scripture card */
 .lj-study {

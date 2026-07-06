@@ -306,7 +306,7 @@
         if (two[1]) d.fields[p.id + '1'] = two[1]; else delete d.fields[p.id + '1'];
       });
       LJStore.savePageData(bp.id, d);
-      if (currentPage() && currentPage().id === bp.id) { state.fields = d.fields; renderFieldLayer(); }
+      if (currentPage() && currentPage().id === bp.id) { state.fields = d.fields; renderFieldLayer(); renderMobileDay(); }
     }
     const wfPages = journal.pages.filter((p) => p.template === 'weeklyFoundations');
     (plan.weeks || []).forEach((wk, k) => {
@@ -1506,7 +1506,7 @@
   function isPhone() { return window.matchMedia('(max-width: 640px)').matches; }
   function mobileEligible() {
     const p = state.journal && currentPage();
-    return isPhone() && p && (p.template === 'planDay' || p.template === 'foundationsDaily');
+    return isPhone() && p && (p.template === 'planDay' || p.template === 'foundationsDaily' || p.template === 'foundationBlueprint');
   }
 
   function mobField(id, cls, placeholder) {
@@ -1521,6 +1521,40 @@
       saveCurrentDebounced();
     });
     return inp;
+  }
+
+  // Phone-native Foundation Blueprint: scripture, a big AI button, and the
+  // six prompts as roomy textareas (the canvas page is too small to write on).
+  function renderMobileBlueprint(wrap, page) {
+    const F = LJData.FOUNDATIONS[page.foundation] || LJData.FOUNDATIONS[0];
+    wrap.appendChild(el('div', 'm-kicker', 'Five Foundations · 12-Week Goal'));
+    wrap.appendChild(el('h1', 'm-date', F.name));
+
+    const ai = el('button', 'm-ai-plan', '✦ Draft this goal with AI');
+    ai.onclick = () => openFoundationPlan(page.foundation);
+    wrap.appendChild(ai);
+
+    const sc = el('div', 'm-card m-scripture');
+    sc.appendChild(el('div', 'm-verse', F.verse));
+    sc.appendChild(el('div', 'm-verse-ref', '— ' + F.verseRef));
+    wrap.appendChild(sc);
+    wrap.appendChild(el('p', 'm-intro', F.intro));
+
+    LJData.BLUEPRINT.forEach((p) => {
+      const card = el('div', 'm-card');
+      card.appendChild(el('div', 'm-label', p.label));
+      card.appendChild(el('div', 'm-q', p.q));
+      const ta = el('textarea', 'm-bp-ta');
+      ta.rows = 2;
+      ta.value = [state.fields[p.id + '0'], state.fields[p.id + '1']].filter(Boolean).join(' ');
+      ta.addEventListener('input', () => {
+        state.fields[p.id + '0'] = ta.value;
+        delete state.fields[p.id + '1'];
+        recordChange('field:' + p.id); saveCurrentDebounced();
+      });
+      card.appendChild(ta);
+      wrap.appendChild(card);
+    });
   }
 
   function renderMobileDay() {
@@ -1552,6 +1586,9 @@
     right.appendChild(pen);
     bar.appendChild(right);
     wrap.appendChild(bar);
+
+    // Foundation Blueprint gets its own mobile card (scripture, AI, 6 prompts).
+    if (page.template === 'foundationBlueprint') { renderMobileBlueprint(wrap, page); return; }
 
     // date header
     let parts = null;

@@ -55,7 +55,7 @@ window.LJData = (function () {
     foundationsDaily:{ name: 'Foundations Daily',        sub: 'Thankful · schedule · top 3 · daily steps' },
     foundationsGoals:{ name: '12-Week Goals',            sub: 'One goal per foundation for the cycle' },
     foundationBlueprint:{ name: 'Foundation Blueprint',  sub: 'Scripture, goal & 12-week plan' },
-    weeklyPrayer:    { name: 'Weekly Prayer Journal',    sub: '90-day prayer · weekly focus · provision' },
+    weeklyPrayer:    { name: 'Weekly Prayer Journal',    sub: '12-week prayer · weekly focus · provision' },
     weeklyFoundations:{ name: 'Weekly Five Foundations', sub: 'Goals · progress · prayer · habit tracking' },
     teachingNotes:   { name: 'Teaching Notes',           sub: 'Sermon / teaching / podcast notes' },
     lined:           { name: 'Lined',                    sub: 'Ruled writing lines' },

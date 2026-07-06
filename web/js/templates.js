@@ -793,8 +793,8 @@ window.LJTemplates = (function () {
   function weeklyPrayer(ctx, o) {
     weekRangeLabel(ctx, o);
     label(ctx, 'Prayer Journal', M, M + 36, { size: 22, color: COLORS.ink });
-    label(ctx, '90 Day Prayer', M, M + 86, { size: 13, color: COLORS.ink });
-    caption(ctx, 'Write one prayer to pray each day for the next 90 days.', M + 210, M + 86);
+    label(ctx, '12-Week Prayer', M, M + 86, { size: 13, color: COLORS.ink });
+    caption(ctx, 'Write one prayer to pray each day through these twelve weeks.', M + 210, M + 86);
     dotRows(ctx, M, M + 116, W - 2 * M, 6, 30);
     label(ctx, 'Weekly Prayer Focus', M, M + 336, { size: 13, color: COLORS.ink });
     caption(ctx, 'Who and what will you pray for this week?', M + 250, M + 336);
@@ -995,8 +995,8 @@ window.LJTemplates = (function () {
     const L = weeklyFoundationsLayout();
     weekRangeLabel(ctx, o);
     label(ctx, 'Five Foundations', M, M + 36, { size: 22, color: COLORS.ink });
-    label(ctx, 'Five Foundations Goals', M, M + 86, { size: 13, color: COLORS.ink });
-    caption(ctx, 'Re-write your 13-week goals.', M + 250, M + 86);
+    label(ctx, "This Week's Foundations", M, M + 86, { size: 13, color: COLORS.ink });
+    caption(ctx, 'Your commitment for each foundation this week.', M + 250, M + 86);
     FOUND.forEach((f, i) => fieldLine(ctx, f, M, M + 124 + i * 40, W - 2 * M, 110));
     label(ctx, 'Weekly Progress', M, L.progLabelY, { size: 13, color: COLORS.ink });
     caption(ctx, 'Track progress to completing your goals.', M + 220, L.progLabelY);
