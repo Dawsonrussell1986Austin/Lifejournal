@@ -27,7 +27,7 @@ window.LJTemplates = (function () {
   }
   function caption(ctx, text, x, y) {
     ctx.save();
-    ctx.font = `italic 14px ${SANS}`;
+    ctx.font = `14px ${SANS}`;
     ctx.fillStyle = COLORS.softInk;
     ctx.textBaseline = 'alphabetic';
     ctx.fillText(text, x, y);
@@ -118,7 +118,7 @@ window.LJTemplates = (function () {
     ctx.strokeStyle = cv.foil; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.moveTo(cx - 48, H * 0.515); ctx.lineTo(cx + 48, H * 0.515); ctx.stroke();
     ctx.fillStyle = cv.foil; ctx.globalAlpha = 0.95; ctx.textBaseline = 'middle';
-    wrapCentered(ctx, cv.verse, cx, H * 0.60, cw - 150, 27, `italic 18px ${SERIF}`);
+    wrapCentered(ctx, cv.verse, cx, H * 0.60, cw - 150, 27, `18px ${SERIF}`);
     ctx.globalAlpha = 1;
     setLetterSpacing(ctx, 2);
     text(ctx, 'THIS JOURNAL BELONGS TO', cx, H * 0.86, `600 12px ${SANS}`, cv.foil, 'middle');
@@ -814,7 +814,7 @@ window.LJTemplates = (function () {
     setLetterSpacing(ctx, 0);
     text(ctx, '12-Week Journal', M, M + 80, `600 42px ${SERIF}`, COLORS.ink);
     text(ctx, `${a.long}  →  ${b.long}`, M, M + 116, `400 18px ${SANS}`, COLORS.softInk);
-    text(ctx, '84 days · 12 weeks · one focused season', M, M + 140, `italic 15px ${SERIF}`, COLORS.softInk);
+    text(ctx, '84 days · 12 weeks · one focused season', M, M + 140, `15px ${SERIF}`, COLORS.softInk);
 
     // Goals pill (top-right) → the single Five Foundations goals page.
     const gr = P.cycleGoalsRect();
@@ -888,7 +888,7 @@ window.LJTemplates = (function () {
       rangeLabel = `Quarter ${q + 1} · ${QUARTER_RANGES[q]}${o.year ? ' ' + o.year : ''}`;
     }
     ctx.save(); ctx.textAlign = 'right';
-    text(ctx, rangeLabel, W - M, M + 84, `italic 17px ${SERIF}`, COLORS.softInk);
+    text(ctx, rangeLabel, W - M, M + 84, `17px ${SERIF}`, COLORS.softInk);
     ctx.restore();
     caption(ctx, 'One measurable goal per foundation for the next twelve weeks — with why it matters and the first step.', M, M + 122);
     hline(ctx, M, M + 144, W - 2 * M, COLORS.rule);
@@ -954,16 +954,16 @@ window.LJTemplates = (function () {
     text(ctx, `${(o.foundation || 0) + 1} / 5`, W - M, M + 30, `700 13px ${SANS}`, COLORS.faint);
     ctx.restore();
 
-    // "Draft with AI" pill (top-right, below the count).
+    // "Create my plan" pill (top-right, below the count).
     const gr = foundationAIRect();
     roundRect(ctx, gr.x, gr.y, gr.w, gr.h, gr.h / 2);
     ctx.fillStyle = COLORS.accent; ctx.fill();
     ctx.textAlign = 'center';
-    text(ctx, '✦  Draft with AI', gr.x + gr.w / 2, gr.y + gr.h / 2, `600 15px ${SANS}`, '#fff', 'middle');
+    text(ctx, '✦  Create my plan', gr.x + gr.w / 2, gr.y + gr.h / 2, `600 15px ${SANS}`, '#fff', 'middle');
     ctx.textAlign = 'left';
 
     // Anchor scripture + reference, then a short teaching intro.
-    let y = wrapLeft(ctx, F.verse, M, M + 122, W - 2 * M, 24, `italic 17px ${SERIF}`, COLORS.softInk, 3);
+    let y = wrapLeft(ctx, F.verse, M, M + 122, W - 2 * M, 24, `17px ${SERIF}`, COLORS.softInk, 3);
     text(ctx, '— ' + F.verseRef, M, y + 6, `600 13px ${SANS}`, COLORS.accent);
     wrapLeft(ctx, F.intro, M, y + 40, W - 2 * M, 22, `400 15px ${SANS}`, COLORS.ink, 3);
 

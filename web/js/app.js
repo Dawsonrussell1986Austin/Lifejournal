@@ -246,7 +246,7 @@
     // unlocked until in-app purchases are configured.
     if (window.LJIAP && !(await LJIAP.isPro())) { openPaywall(); return; }
     state.planFoundation = fi;
-    $('#planTitle').textContent = 'Draft your ' + F.name + ' goal';
+    $('#planTitle').textContent = 'Create your ' + F.name + ' plan';
     const onPage = state.journal && currentPage() && currentPage().template === 'foundationBlueprint';
     const cur = onPage ? [state.fields.what0, state.fields.what1].filter(Boolean).join(' ').trim() : '';
     $('#planGoal').value = cur;
@@ -272,14 +272,14 @@
     const goal = ($('#planGoal').value || '').trim();
     if (!goal) { $('#planStatus').textContent = 'Type your goal first.'; return; }
     $('#planGo').disabled = true;
-    $('#planStatus').textContent = 'Drafting your 12-week plan…';
+    $('#planStatus').textContent = 'Creating your 12-week plan…';
     try {
       const r = await fetch('/api/plan', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ foundation: F.name, goal: goal, weeks: 12, scripture: F.verseRef })
       });
       const j = await r.json();
-      if (!r.ok) throw new Error(j.error === 'not configured' ? 'AI isn’t configured yet — you can still fill this in by hand.' : (j.error || 'Something went wrong.'));
+      if (!r.ok) throw new Error(j.error === 'not configured' ? 'Plan creation isn’t set up yet — you can still fill this in by hand.' : (j.error || 'Something went wrong.'));
       applyFoundationPlan(fi, j);
       $('#planModal').classList.add('hidden');
       toast('Your ' + F.name + ' plan is ready ✦');
@@ -996,7 +996,7 @@
       body.appendChild(note);
     } else if (kind === 'cyclegoals') {
       body.appendChild(mfLabel('First — set your Five Foundations goals for these 12 weeks.'));
-      body.appendChild(el('p', 'mf-sub', 'One goal per foundation. You can refine each — and use ✦ Draft with AI — on its own page later.'));
+      body.appendChild(el('p', 'mf-sub', 'One goal per foundation. You can refine each — and let LifeJournal build out the plan — on its own page later.'));
       LJData.FOUNDATIONS.forEach((F, i) => {
         const sec = el('div', 'mf-fnd');
         sec.appendChild(el('div', 'mf-fnd-name', F.name));
@@ -1530,7 +1530,7 @@
     wrap.appendChild(el('div', 'm-kicker', 'Five Foundations · 12-Week Goal'));
     wrap.appendChild(el('h1', 'm-date', F.name));
 
-    const ai = el('button', 'm-ai-plan', '✦ Draft this goal with AI');
+    const ai = el('button', 'm-ai-plan', '✦ Have LifeJournal create my plan');
     ai.onclick = () => openFoundationPlan(page.foundation);
     wrap.appendChild(ai);
 
