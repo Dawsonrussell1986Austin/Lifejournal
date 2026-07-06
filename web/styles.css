@@ -156,6 +156,13 @@ body[data-theme="ink"] #library {
 .jcard-progress .bar i { display: block; height: 100%; width: var(--prog, 0%); background: var(--red); border-radius: 2px; }
 .jcard-progress .jp-day { display: block; font-size: 10.5px; color: var(--soft-ink); margin-top: 7px; }
 .jcard-continue { display: none; font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--soft-ink); margin: 12px auto 0 14px; }
+.jcard-renew {
+  align-self: flex-start; margin-top: 12px;
+  font-size: 11px; font-weight: 700; letter-spacing: .3px; color: #fff;
+  background: rgba(255, 255, 255, 0.18); border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 999px; padding: 7px 12px; cursor: pointer; transition: background .15s ease;
+}
+.jcard-renew:hover { background: rgba(255, 255, 255, 0.3); }
 
 /* Ink & Glass: cards become dark glass panels with an LJ monogram */
 body[data-theme="ink"] .jcard {

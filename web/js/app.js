@@ -64,9 +64,10 @@
       const cv = LJData.COVERS[j.cover] || LJData.COVERS.sage;
       const tile = el('div', 'journal-tile');
       const isPlanner = j.kind === 'planner';
-      let count, prog = 0, progLabel = '';
+      let count, prog = 0, progLabel = '', renewable = false;
       if (j.cycle && window.LJPlanner) {
         const st = LJPlanner.cycleStatus(j.startISO);
+        renewable = st.state === 'done' || (st.state === 'active' && st.week === LJPlanner.CYCLE_WEEKS);
         if (st.state === 'before') {
           count = `Starts in ${st.startsInDays} day${st.startsInDays === 1 ? '' : 's'}`;
           prog = 0; progLabel = 'Week 1 of 12';
@@ -94,8 +95,11 @@
           <div class="jcard-title">${escapeHtml(j.title)}</div>
           <div class="jcard-count">${count}</div>
           ${isPlanner ? `<div class="jcard-progress"><div class="bar"><i></i></div><span class="jp-day">${progLabel}</span></div>` : ''}
+          ${renewable ? '<button class="jcard-renew">Start next 12 weeks →</button>' : ''}
         </div>`;
       tile.querySelector('.jcard-del').onclick = (e) => { e.stopPropagation(); deleteJournal(j.id); };
+      const renewBtn = tile.querySelector('.jcard-renew');
+      if (renewBtn) renewBtn.onclick = (e) => { e.stopPropagation(); startNextCycle(j); };
       tile.onclick = () => openJournal(j.id);
       shelf.appendChild(tile);
     });
@@ -164,6 +168,35 @@
     openJournal(journal.id);
   }
 
+  // Bump a trailing count in a title: "… Journal" → "… Journal · 2" → "· 3".
+  function nextCycleTitle(t) {
+    const m = (t || '').match(/^(.*·\s*)(\d+)\s*$/);
+    if (m) return m[1] + (parseInt(m[2], 10) + 1);
+    return (t || 'My 12-Week Journal') + ' · 2';
+  }
+
+  // Start the next 12 weeks: a fresh cycle beginning the day after this one
+  // ends, same cover, with the Five Foundations goals carried forward as a
+  // starting point (the method encourages re-writing them each cycle).
+  function startNextCycle(journal) {
+    if (!journal || !journal.cycle || !window.LJPlanner) return;
+    const nextStartISO = LJPlanner.cycleDayISO(journal.startISO, LJPlanner.CYCLE_DAYS);
+    const next = LJPlanner.generateCycle(nextStartISO, { title: nextCycleTitle(journal.title), cover: journal.cover });
+    const oldGoals = journal.pages.find((pg) => pg.template === 'foundationsGoals');
+    const newGoals = next.pages.find((pg) => pg.template === 'foundationsGoals');
+    if (oldGoals && newGoals) {
+      const d = LJStore.loadPageData(oldGoals.id);
+      if (d.fields && Object.keys(d.fields).length) {
+        LJStore.savePageData(newGoals.id, { strokes: [], texts: [], checks: {}, fields: Object.assign({}, d.fields) });
+      }
+    }
+    state.lib.journals.unshift(next);
+    LJStore.saveLibrary(state.lib);
+    renderShelf();
+    openJournal(next.id);
+    toast('New cycle · ' + LJPlanner.partsFor(nextStartISO).long);
+  }
+
   // ---------- Editor ----------
   function buildPlannerIndex() {
     state.dateIndex = {}; state.monthIndex = {}; state.yearPageIndex = -1; state.goalsIndex = {}; state.weekIndex = {};
@@ -210,9 +243,13 @@
       state.canvas = new JournalCanvas($('#bgCanvas'), $('#inkCanvas'), $('#pageWrap'));
       state.canvas.onChange = () => { recordChange(); saveCurrentDebounced(); };
     }
-    // The planner opens on today's page; other journals open on their cover.
+    // Land on today's daily page when it's in range; otherwise a cycle journal
+    // opens on its overview (its natural home), and other journals on the cover.
     const todayIdx = window.LJPlanner ? state.dateIndex[LJPlanner.todayISO()] : null;
-    loadPage(state.journal.kind === 'planner' && todayIdx != null ? todayIdx : 0);
+    let landing = 0;
+    if (state.journal.kind === 'planner' && todayIdx != null) landing = todayIdx;
+    else if (state.journal.cycle && state.yearPageIndex >= 0) landing = state.yearPageIndex;
+    loadPage(landing);
     setMode(defaultMode(), true);
     requestAnimationFrame(relayout);
   }
