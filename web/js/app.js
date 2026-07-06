@@ -697,7 +697,9 @@
   }
 
   function maybeMorningFlow(journalArg, fromJournal) {
-    if (window.innerWidth <= 640 || !window.LJPlanner) return false;
+    // Runs on every device — phones now get the same guided ritual as
+    // desktop/iPad instead of the single cram-everything-in card view.
+    if (!window.LJPlanner) return false;
     const planner = journalArg || state.lib.journals.find((j) => j.kind === 'planner');
     if (!planner || planner.kind !== 'planner') return false;
     const iso = LJPlanner.todayISO();
@@ -719,7 +721,7 @@
     const hasYesterday = !!(ctx.ypage && (ctx.yFields.top0 || ctx.yFields.top1 || ctx.yFields.top2));
     flow.steps = [];
     if (hasYesterday) flow.steps.push('review');
-    flow.steps.push('thank', 'tops', 'scripture', 'journal', 'schedule', 'foundations');
+    flow.steps.push('thank', 'scripture', 'tops', 'journal', 'schedule', 'foundations');
     if (window.LJNotify && LJNotify.available() && !LJKV.get('lifejournal.reminder')) flow.steps.push('reminder');
     flow.step = 0;
     const day = new Date().toLocaleDateString(undefined, { weekday: 'long' });

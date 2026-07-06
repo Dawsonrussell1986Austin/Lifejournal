@@ -8,11 +8,11 @@ window.LJData = (function () {
   const PALETTES = {
     light: {
       ink: '#26241f', softInk: '#8a8478', rule: '#d8d2c4', faint: '#e7e2d5',
-      accent: '#2f4a3b', red: '#db4a33', paper: '#f7f3ea', dark: false
+      accent: '#b5623f', red: '#db4a33', paper: '#f7f3ea', dark: false
     },
     dark: {
       ink: '#e8ecf2', softInk: '#8b97a8', rule: '#39404d', faint: '#272d38',
-      accent: '#5a8c6e', red: '#db4a33', paper: '#141a24', dark: true
+      accent: '#b5623f', red: '#db4a33', paper: '#141a24', dark: true
     }
   };
   const COLORS = Object.assign({}, PALETTES.light);

@@ -9,8 +9,8 @@
   --soft-ink: #8a8478;
   --rule: #d8d2c4;
   --faint: #e7e2d5;
-  --accent: #2f4a3b;
-  --accent-hover: #263d30;
+  --accent: #b5623f;
+  --accent-hover: #9d5236;
   --red: #db4a33;
   --paper: #f7f3ea;
   --bg: #e9e7e2;
@@ -23,15 +23,15 @@
   --page-shadow: 0 12px 34px rgba(38, 36, 31, 0.16);
   --modal-bg: #fbf8f1;
   --input-bg: #ffffff;
-  --hover: rgba(47, 74, 59, 0.08);
+  --hover: rgba(181, 98, 63, 0.08);
 }
 body[data-theme="ink"] {
   --ink: #e8ecf2;
   --soft-ink: #8b97a8;
   --rule: #39404d;
   --faint: #272d38;
-  --accent: #5a8c6e;
-  --accent-hover: #4c7a5e;
+  --accent: #b5623f;
+  --accent-hover: #9d5236;
   --red: #db4a33;
   --paper: #141a24;
   --bg: #10151d;
@@ -710,4 +710,24 @@ body[data-theme="ink"] .mobile-tabs { background: #12161e; }
   .modal { padding: 12px; }
   .modal-card { padding: 18px; border-radius: 18px; max-height: 84vh; }
   .header-actions #newJournalBtn { padding: 8px 12px; font-size: 13px; }
+
+  /* Guided morning flow on phones: one question per screen, full-height */
+  #morningFlow {
+    align-items: stretch; padding: 0;
+    overflow-y: auto; -webkit-overflow-scrolling: touch;
+  }
+  .mf-inner {
+    width: 100%; min-height: 100%;
+    display: flex; flex-direction: column;
+    padding: calc(20px + env(safe-area-inset-top, 0px)) 18px
+             calc(20px + env(safe-area-inset-bottom, 0px));
+  }
+  .mf-greet { font-size: 30px; margin: 6px 0 20px; }
+  .mf-spark { font-size: 26px; margin-right: 10px; vertical-align: 2px; }
+  .mf-card { padding: 20px 18px 16px; border-radius: 20px; }
+  .mf-hero { font-size: 20px; }
+  #mfBody { max-height: none; }
+  /* stack the schedule's two columns on a narrow screen */
+  .mf-sched { grid-template-columns: 1fr; column-gap: 0; }
+  .mf-chips { margin-top: 16px; }
 }
