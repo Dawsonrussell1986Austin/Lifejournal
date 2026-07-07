@@ -1219,20 +1219,37 @@
       const grid = el('div', 'mf-sched');
       const hours = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22];
       const evts = (calOn() && calCache[flow.iso]) || [];
+      const cells = [];
       hours.forEach((h, i) => {
         const row = el('div', 'mf-sched-row');
         row.appendChild(el('span', 'm-hour', mobHourLabel(h)));
+        const cell = el('div', 'sched-cell');
         const inp = el('input', 'mf-input mf-sched-in');
         inp.type = 'text';
         const evt = evts.find((e) => !e.allDay && Math.floor(e.startH) === h);
         if (d.sch['sch' + i] === undefined && evt) d.sch['sch' + i] = evt.title;
         inp.value = d.sch['sch' + i] || '';
         if (evt) inp.placeholder = evt.title;
-        inp.addEventListener('input', () => { d.sch['sch' + i] = inp.value; });
-        row.appendChild(inp);
+        cell.appendChild(inp);
+        cell.appendChild(el('span', 'sched-ditto', '↓'));
+        row.appendChild(cell);
         grid.appendChild(row);
+        cells.push({ cell: cell, inp: inp, i: i });
+        inp.addEventListener('input', () => { d.sch['sch' + i] = inp.value; refreshDitto(); });
+        inp.addEventListener('focus', () => cell.classList.remove('is-dup'));
+        inp.addEventListener('blur', refreshDitto);
       });
+      // A repeated slot shows a continuation arrow instead of the duplicate text.
+      function refreshDitto() {
+        cells.forEach((c) => {
+          const cur = (d.sch['sch' + c.i] || '').trim();
+          const prev = c.i > 0 ? (d.sch['sch' + (c.i - 1)] || '').trim() : '';
+          const dup = cur && prev && cur === prev && document.activeElement !== c.inp;
+          c.cell.classList.toggle('is-dup', dup);
+        });
+      }
       body.appendChild(grid);
+      refreshDitto();
       if (calOn() && flow.iso && !calCache[flow.iso]) {
         LJCal.events(flow.iso).then((r) => {
           if (r && r.events) { calCache[flow.iso] = r.events; if (flow.steps[flow.step] === 'schedule') renderFlowStep(); }
@@ -1932,7 +1949,18 @@
       any = true;
       const row = el('div', 'm-row m-sched-row' + (isNow ? ' m-now' : ''));
       row.appendChild(el('span', 'm-hour', mobHourLabel(h)));
-      row.appendChild(mobField(id, ''));
+      const cell = el('div', 'sched-cell');
+      const f = mobField(id, '');
+      cell.appendChild(f);
+      cell.appendChild(el('span', 'sched-ditto', '↓'));
+      const cur = (state.fields[id] || '').trim(), prev = (state.fields['sch' + (i - 1)] || '').trim();
+      if (cur && prev && cur === prev) cell.classList.add('is-dup');
+      f.addEventListener('focus', () => cell.classList.remove('is-dup'));
+      f.addEventListener('blur', () => {
+        const c = (state.fields[id] || '').trim(), p = (state.fields['sch' + (i - 1)] || '').trim();
+        cell.classList.toggle('is-dup', !!(c && p && c === p));
+      });
+      row.appendChild(cell);
       if (isNow) row.appendChild(el('span', 'm-now-lab', 'Now'));
       sched.appendChild(row);
       evts.forEach((e) => sched.appendChild(el('div', 'm-evt',

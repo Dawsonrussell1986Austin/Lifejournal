@@ -537,6 +537,12 @@ body[data-theme="ink"] .m-suggest { background: #12161e; }
 }
 .m-study:active { background: var(--accent-hover); }
 .m-study-full { width: 100%; margin-top: 14px; padding: 13px 16px; font-size: 14px; }
+/* Schedule "ditto": a repeated slot shows a continuation arrow, not the text. */
+.sched-cell { position: relative; flex: 1; min-width: 0; display: flex; }
+.sched-cell .mf-sched-in, .sched-cell .m-input { flex: 1; }
+.sched-cell .sched-ditto { display: none; position: absolute; left: 2px; top: 50%; transform: translateY(-50%); color: var(--soft-ink); opacity: .45; font-size: 18px; pointer-events: none; }
+.sched-cell.is-dup .mf-sched-in, .sched-cell.is-dup .m-input { color: transparent; }
+.sched-cell.is-dup .sched-ditto { display: block; }
 .m-ai-plan {
   border: none; cursor: pointer; border-radius: 999px; width: 100%;
   background: var(--accent); color: #fff; font-size: 15px; font-weight: 700;
