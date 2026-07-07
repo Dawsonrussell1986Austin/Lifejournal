@@ -1056,12 +1056,18 @@
   }
 
   function mfLabel(text) { return el('div', 'mf-label', text); }
+  // A one-line-looking field that WRAPS onto new lines as you type (an
+  // auto-growing textarea) so long entries stay fully visible. Enter still
+  // advances the flow (handled by callers) rather than inserting a newline.
   function mfInputRow(getset, placeholder, cls) {
-    const inp = el('input', 'mf-input' + (cls ? ' ' + cls : ''));
-    inp.type = 'text';
+    const inp = el('textarea', 'mf-input' + (cls ? ' ' + cls : ''));
+    inp.rows = 1;
     inp.placeholder = placeholder || '';
     inp.value = getset() || '';
-    inp.addEventListener('input', () => getset(inp.value));
+    const grow = () => { inp.style.height = 'auto'; inp.style.height = inp.scrollHeight + 'px'; };
+    inp.addEventListener('input', () => { getset(inp.value); grow(); });
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) e.preventDefault(); });
+    requestAnimationFrame(grow);
     return inp;
   }
 
@@ -1502,14 +1508,28 @@
 
   // ---------- AI Bible study ----------
   // Tiny markdown renderer for the study text (### headers, **bold**, paragraphs).
+  // Minimal markdown → HTML: headings, bullet/numbered lists, and paragraphs.
+  // Processes line-by-line so a "### Heading" followed by its paragraph on the
+  // next line renders as a real heading + body (not one giant heading block).
   function mdLite(text) {
-    const esc = escapeHtml(String(text));
-    return esc.split(/\n{2,}/).map((block) => {
-      const b = block.trim();
-      if (!b) return '';
-      if (b.startsWith('###')) return '<h3>' + b.replace(/^#+\s*/, '') + '</h3>';
-      return '<p>' + b.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>') + '</p>';
-    }).join('');
+    const inline = (s) => escapeHtml(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+    const lines = String(text).replace(/\r/g, '').split('\n');
+    let html = '', para = [], list = null;
+    const flushP = () => { if (para.length) { html += '<p>' + para.join(' ') + '</p>'; para = []; } };
+    const flushL = () => { if (list) { html += '<' + list.tag + '>' + list.items.map((li) => '<li>' + li + '</li>').join('') + '</' + list.tag + '>'; list = null; } };
+    lines.forEach((raw) => {
+      const line = raw.trim();
+      if (!line) { flushP(); flushL(); return; }
+      const h = line.match(/^#{1,4}\s+(.*)$/);
+      if (h) { flushP(); flushL(); html += '<h3>' + inline(h[1].replace(/\s*—\s*$/, '')) + '</h3>'; return; }
+      const ol = line.match(/^\d+[.)]\s+(.*)$/);
+      const ul = line.match(/^[-*•]\s+(.*)$/);
+      if (ol) { flushP(); if (!list || list.tag !== 'ol') { flushL(); list = { tag: 'ol', items: [] }; } list.items.push(inline(ol[1])); return; }
+      if (ul) { flushP(); if (!list || list.tag !== 'ul') { flushL(); list = { tag: 'ul', items: [] }; } list.items.push(inline(ul[1])); return; }
+      flushL(); para.push(inline(line));
+    });
+    flushP(); flushL();
+    return html;
   }
   // The Bible Studies journal: every generated study is stored here with its
   // reference, generation date, and your own notes. Searchable from the
@@ -1542,7 +1562,8 @@
     d.innerHTML =
       '<h2 class="sd-ref">' + escapeHtml(parsed.ref) + '</h2>' +
       '<div class="sd-date">Writing your study…</div>' +
-      '<p class="study-loading">Cultural &amp; historical context, how it points to the Gospel, and how to live it out — just a few seconds.</p>';
+      '<div class="study-loading"><span class="lj-spinner"></span>' +
+      '<span>Reading the passage — cultural context, how it points to the Gospel, and how to live it out. This takes a few seconds.</span></div>';
     try {
       const r = await fetch('/api/study', {
         method: 'POST',
@@ -1552,7 +1573,7 @@
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || 'Something went wrong.');
       const entry = upsertStudy(parsed.ref, j.study);
-      renderStudyDetail(entry.id);
+      renderStudyDetail(entry.id, true);
       toast('Saved to your Bible Studies');
     } catch (e) {
       const retry = el('button', 'btn primary', 'Try again');
@@ -1629,7 +1650,7 @@
       box.appendChild(b);
     });
   }
-  function renderStudyDetail(id) {
+  function renderStudyDetail(id, animate) {
     const s = loadStudies().find((x) => x.id === id);
     if (!s) { renderStudiesList(''); return; }
     $('#studiesList').classList.add('hidden');
@@ -1646,7 +1667,13 @@
     d.appendChild(head);
     d.appendChild(el('h2', 'sd-ref', escapeHtml(s.ref)));
     d.appendChild(el('div', 'sd-date', 'Generated ' + fmtStudyDate(s.created)));
-    d.appendChild(el('div', 'study-body', mdLite(s.study)));
+    const bodyEl = el('div', 'study-body', mdLite(s.study));
+    d.appendChild(bodyEl);
+    // Reveal the study block-by-block so a freshly written one "types in".
+    if (animate) {
+      bodyEl.classList.add('reveal');
+      Array.prototype.forEach.call(bodyEl.children, (c, i) => { c.style.animationDelay = (i * 0.12) + 's'; });
+    }
     d.appendChild(el('div', 'm-label sd-notes-label', 'My notes'));
     const ta = document.createElement('textarea');
     ta.className = 'sd-notes';
@@ -1949,15 +1976,16 @@
     refInp.addEventListener('input', updateDD);
     refInp.addEventListener('blur', () => setTimeout(() => dd.classList.add('hidden'), 200));
     sc.appendChild(dd);
-    const studyBtn = el('button', 'm-study', '✦ Create Bible Study');
-    studyBtn.onclick = () => openStudy(state.fields.scr0 || '');
-    sc.appendChild(studyBtn);
     sc.appendChild(mobField('scr1', 'm-serif', 'What did I read?'));
     sc.appendChild(el('div', 'm-label m-label-green', 'Observe & apply'));
     sc.appendChild(mobField('obs0', '', 'What did I learn?'));
     sc.appendChild(mobField('obs1', ''));
     sc.appendChild(el('div', 'm-label m-label-green', 'The gospel'));
     sc.appendChild(mobField('gos0', '', 'How does this point to Christ?'));
+    // Study button lives at the bottom of the scripture card, full width.
+    const studyBtn = el('button', 'm-study m-study-full', '✦ Create Bible Study');
+    studyBtn.onclick = () => openStudy(state.fields.scr0 || '');
+    sc.appendChild(studyBtn);
     wrap.appendChild(sc);
 
     // journal card — one flowing textarea backed by the jrn line fields
