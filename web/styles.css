@@ -467,6 +467,11 @@ body[data-theme="ink"] .toolbar { background: #1c2330; border: 1px solid #262e3c
 .m-count { font-size: 12px; color: var(--soft-ink); font-variant-numeric: tabular-nums; }
 .m-kicker { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--red); }
 .m-date { font-family: var(--serif); font-weight: 600; font-size: 30px; margin: 2px 0 6px; color: var(--ink); }
+.m-date-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.m-date-row .m-date { margin: 2px 0 6px; }
+.m-date-nav { display: flex; gap: 4px; flex: 0 0 auto; }
+.m-daynav { border: 1px solid var(--card-line); background: var(--panel); color: var(--ink); width: 40px; height: 40px; border-radius: 12px; font-size: 22px; line-height: 1; cursor: pointer; }
+.m-daynav.off { opacity: .3; pointer-events: none; }
 .m-label { font-size: 10.5px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--soft-ink); margin-bottom: 8px; }
 .m-label-red { color: var(--red); }
 .m-label-green { color: var(--accent); margin-top: 12px; }

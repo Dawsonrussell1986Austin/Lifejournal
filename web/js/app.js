@@ -1732,6 +1732,17 @@
     if (changed) { recordChange(); saveCurrentDebounced(); renderMobileDay(); }
   }
 
+  function adjacentDate(iso, delta) {
+    const p = LJPlanner.parseISO(iso);
+    return LJPlanner.isoFromTs(Date.UTC(p.y, p.m, p.d) + delta * LJPlanner.DAY_MS);
+  }
+  function stepDay(delta) {
+    const p = currentPage();
+    if (!p || !p.date || !window.LJPlanner) return;
+    const nd = adjacentDate(p.date, delta);
+    if (state.dateIndex[nd] != null) { state.forceCanvas = false; goToDate(nd); }
+  }
+
   function renderMobileDay() {
     const wrap = $('#mobileDay');
     if (!wrap) return;
@@ -1765,12 +1776,33 @@
     // Foundation Blueprint gets its own mobile card (scripture, AI, 6 prompts).
     if (page.template === 'foundationBlueprint') { renderMobileBlueprint(wrap, page); return; }
 
-    // date header
+    // date header — cycle-aware kicker + prev/next day nav
     let parts = null;
     if (page.date && window.LJPlanner) parts = LJPlanner.partsFor(page.date);
-    const doy = parts ? Math.floor((Date.UTC(parts.year, parts.month, parts.day) - Date.UTC(parts.year, 0, 0)) / 86400000) : dayOfYear(new Date());
-    wrap.appendChild(el('div', 'm-kicker', parts ? `Day ${doy} · ${parts.weekdayName}` : 'Daily page'));
-    wrap.appendChild(el('h1', 'm-date', parts ? parts.long : 'Foundations Daily'));
+    let kicker = 'Daily page';
+    if (parts) {
+      if (state.journal.cycle) {
+        const st = LJPlanner.cycleStatus(state.journal.startISO, page.date);
+        kicker = st.state === 'active' ? `Week ${st.week} · Day ${st.day} of ${st.total} · ${parts.weekdayName}` : parts.weekdayName;
+      } else {
+        const doy = Math.floor((Date.UTC(parts.year, parts.month, parts.day) - Date.UTC(parts.year, 0, 0)) / 86400000);
+        kicker = `Day ${doy} · ${parts.weekdayName}`;
+      }
+    }
+    wrap.appendChild(el('div', 'm-kicker', kicker));
+    const dateRow = el('div', 'm-date-row');
+    dateRow.appendChild(el('h1', 'm-date', parts ? parts.long : 'Foundations Daily'));
+    if (page.date && window.LJPlanner) {
+      const nav = el('div', 'm-date-nav');
+      const pv = adjacentDate(page.date, -1), nx = adjacentDate(page.date, 1);
+      const prevB = el('button', 'm-daynav' + (state.dateIndex[pv] == null ? ' off' : ''), '‹');
+      prevB.onclick = () => stepDay(-1);
+      const nextB = el('button', 'm-daynav' + (state.dateIndex[nx] == null ? ' off' : ''), '›');
+      nextB.onclick = () => stepDay(1);
+      nav.appendChild(prevB); nav.appendChild(nextB);
+      dateRow.appendChild(nav);
+    }
+    wrap.appendChild(dateRow);
 
     // thankful banner
     const banner = el('div', 'm-banner');
