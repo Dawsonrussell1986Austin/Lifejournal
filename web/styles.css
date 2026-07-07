@@ -614,10 +614,10 @@ body[data-theme="ink"] .lj-study:hover { background: var(--accent); color: #fff;
 #studiesSearch { margin-bottom: 12px; }
 
 /* ---------- Guided morning flow (Claude-homepage style) ---------- */
-#morningFlow {
+#morningFlow, #cycleDone {
   background: var(--bg);
   display: flex; align-items: center; justify-content: center;
-  padding: 24px;
+  padding: 24px; overflow-y: auto;
 }
 .mf-inner { width: min(820px, 94%); text-align: center; }
 .mf-greet {
@@ -626,7 +626,7 @@ body[data-theme="ink"] .lj-study:hover { background: var(--accent); color: #fff;
 }
 .mf-spark { color: var(--red); margin-right: 14px; font-size: 44px; vertical-align: 4px; }
 .mf-kicker { font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); margin: 0 0 10px; }
-.cd-badge { width: 58px; height: 58px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 28px; display: flex; align-items: center; justify-content: center; margin-bottom: 18px; }
+.cd-badge { width: 58px; height: 58px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 28px; display: flex; align-items: center; justify-content: center; margin: 0 auto 18px; }
 .cd-sub { font-family: var(--serif); font-style: normal; font-size: 18px; color: var(--soft-ink); margin: -22px 0 24px; }
 .mf-card {
   background: var(--modal-bg); border: 1px solid var(--card-line);
