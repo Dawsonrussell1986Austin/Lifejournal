@@ -390,28 +390,17 @@ window.LJTemplates = (function () {
       scr: { y: M + 362, d: [M + 404, M + 440] },
       obs: { y: M + 486, d: [0, 1, 2, 3, 4, 5].map((i) => M + 528 + i * 36) },
       gos: { y: M + 754, d: [0, 1, 2, 3, 4, 5].map((i) => M + 796 + i * 36) },
-      fndLabelY: M + 1052, fndRows: [M + 1080, M + 1120], chipH: 30,
+      fndLabelY: M + 1026, fndRowTop: M + 1054, fndRowH: 32, fndLabelW: 104,
       jrnLabelY: M + 618, jrnTop: M + 656, jrnGap: 40, jrnRows: 12
     };
   }
-  // Five Foundations pill chips (two rows in the right column).
+  // Five Foundations — one row per foundation (check + label + today's action).
   const FND_LABELS = ['FAITH', 'FAMILY', 'FINANCES', 'FITNESS', 'FOCUS'];
-  const FND_W = { FAITH: 66, FAMILY: 76, FINANCES: 92, FITNESS: 82, FOCUS: 66 };
-  function fndChips() {
-    const L = dailyLayout(), out = [];
-    let x = L.rx, row = 0;
-    FND_LABELS.forEach((lab, i) => {
-      const w = FND_W[lab];
-      if (x + w > L.rx + L.rw + 4) { row++; x = L.rx; }
-      out.push({ id: 'fnd' + i, kind: 'pill', label: lab, x, y: L.fndRows[Math.min(row, 1)] - L.chipH + 8, w, h: L.chipH });
-      x += w + 10;
-    });
-    return out;
-  }
   function dailyChecks() {
     const L = dailyLayout(), out = [];
     for (let i = 0; i < 3; i++) out.push({ id: 'top' + i, x: L.rx, y: L.top3Y + i * L.top3Gap - 17, size: 21 });
-    return out.concat(fndChips());
+    for (let i = 0; i < 5; i++) out.push({ id: 'fnd' + i, x: L.rx, y: L.fndRowTop + i * L.fndRowH - 13, size: 19 });
+    return out;
   }
   function dailyFields() {
     const L = dailyLayout(), f = [];
@@ -425,6 +414,7 @@ window.LJTemplates = (function () {
     L.scr.d.forEach((y, i) => f.push({ id: 'scr' + i, x: L.rx, y, w: L.rw, size: 20, bible: i === 0 }));
     L.obs.d.forEach((y, i) => f.push({ id: 'obs' + i, x: L.rx, y, w: L.rw, size: 20, serif: true }));
     L.gos.d.forEach((y, i) => f.push({ id: 'gos' + i, x: L.rx, y, w: L.rw, size: 20, serif: true }));
+    for (let i = 0; i < 5; i++) f.push({ id: 'step' + i, x: L.rx + L.fndLabelW + 6, y: L.fndRowTop + i * L.fndRowH, w: L.rw - L.fndLabelW - 6, size: 18, serif: true });
     for (let i = 0; i < L.jrnRows; i++) f.push({ id: 'jrn' + i, x: M, y: L.jrnTop + i * L.jrnGap, w: L.leftW, size: 22 });
     return f;
   }
@@ -504,16 +494,13 @@ window.LJTemplates = (function () {
     daySection(ctx, "TODAY'S TOP 3", 'Must be done today.', L.rx, L.top3Y - 34);
     for (let i = 0; i < 3; i++) hline(ctx, L.rx + 34, L.top3Y + i * L.top3Gap + 4, L.rw - 34, COLORS.faint);
 
-    daySection(ctx, 'FIVE FOUNDATIONS', null, L.rx, L.fndLabelY - 8);
-    fndChips().forEach((c) => {
-      ctx.save();
-      ctx.strokeStyle = COLORS.rule; ctx.lineWidth = 1.2;
-      roundRect(ctx, c.x, c.y, c.w, c.h, c.h / 2); ctx.stroke();
-      ctx.textAlign = 'center';
+    daySection(ctx, 'FIVE FOUNDATIONS', 'One thing today.', L.rx, L.fndLabelY - 8);
+    FND_LABELS.forEach((lab, i) => {
+      const y = L.fndRowTop + i * L.fndRowH;
       setLetterSpacing(ctx, 1);
-      text(ctx, c.label, c.x + c.w / 2, c.y + c.h / 2 + 4, `700 10px ${SANS}`, COLORS.softInk);
+      text(ctx, lab, L.rx + 30, y + 5, `700 10.5px ${SANS}`, COLORS.accent);
       setLetterSpacing(ctx, 0);
-      ctx.restore();
+      hline(ctx, L.rx + L.fndLabelW, y + 7, L.rw - L.fndLabelW, COLORS.faint);
     });
 
     // Scripture card (green-tinted glass in the dark theme)

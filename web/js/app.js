@@ -1799,7 +1799,11 @@
       if (tasks[i] && (!cur || cur === (prev[i] || ''))) { state.fields['step' + i] = tasks[i]; changed = true; }
     });
     state.mobSuggested = { iso: page.date, tasks: tasks };
-    if (changed) { recordChange(); saveCurrentDebounced(); renderMobileDay(); }
+    if (changed) {
+      recordChange(); saveCurrentDebounced();
+      renderFieldLayer(); renderInteractiveLayer();   // desktop canvas
+      renderMobileDay();                              // phone card
+    }
   }
 
   function adjacentDate(iso, delta) {
@@ -2232,6 +2236,23 @@
       btn.style.top = ((L.card.y + 12) * s) + 'px';
       btn.onclick = () => openStudy(state.fields.scr0 || '');
       layer.appendChild(btn);
+    }
+
+    // Five Foundations "today" on the desktop/iPad daily page: a Suggest
+    // button by the section, and auto-fill once per day from the plan.
+    if ((page.template === 'planDay' || page.template === 'foundationsDaily') && state.journal.cycle && window.LJPlanner && page.date) {
+      const L = LJTemplates.dailyLayout();
+      const sg = el('button', 'lj-study', '↻ Suggest');
+      sg.title = 'Suggest today’s action for each foundation';
+      sg.style.left = ((L.rx + L.rw - 92) * s) + 'px';
+      sg.style.top = ((L.fndLabelY - 24) * s) + 'px';
+      sg.onclick = () => suggestMobileFoundations(page, true);
+      layer.appendChild(sg);
+      const anyStep = SIDE_FND.some((_, i) => (state.fields['step' + i] || '').trim());
+      if (!anyStep && state.mobTodayFetched !== page.date) {
+        state.mobTodayFetched = page.date;
+        suggestMobileFoundations(page, false);
+      }
     }
 
     const nm = LJTemplates.nowMarker(page);
