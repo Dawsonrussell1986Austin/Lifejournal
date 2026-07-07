@@ -3,12 +3,14 @@
 //     { foundation, goal, weeks, scripture }
 //   -> { what, how, who, where, when, why, weeks: ["wk1 action", ... x12] }
 const MODEL = 'claude-sonnet-5';
+const { limited } = require('./_ratelimit');
 
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') { res.status(405).json({ error: 'POST only' }); return; }
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) { res.status(503).json({ error: 'not configured' }); return; }
+  if (await limited(req, res)) return;
 
   const b = req.body || {};
   const foundation = String(b.foundation || 'Focus').slice(0, 20);

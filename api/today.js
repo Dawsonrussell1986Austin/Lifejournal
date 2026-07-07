@@ -4,12 +4,14 @@
 //     { items: [{ foundation, goal, week }], weekday, week }
 //   -> { tasks: ["<faith today>", ... one per item] }
 const MODEL = 'claude-sonnet-5';
+const { limited } = require('./_ratelimit');
 
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') { res.status(405).json({ error: 'POST only' }); return; }
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) { res.status(503).json({ error: 'not configured' }); return; }
+  if (await limited(req, res)) return;
 
   const b = req.body || {};
   const items = Array.isArray(b.items) ? b.items.slice(0, 5) : [];

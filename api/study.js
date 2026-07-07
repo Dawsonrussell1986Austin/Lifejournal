@@ -7,6 +7,7 @@
 // passage points to the Gospel.
 
 const MODEL = 'claude-sonnet-5';
+const { limited } = require('./_ratelimit');
 
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
@@ -19,6 +20,7 @@ module.exports = async (req, res) => {
     res.status(503).json({ error: 'Bible study generation isn’t configured yet — the ANTHROPIC_API_KEY environment variable needs to be set in Vercel.' });
     return;
   }
+  if (await limited(req, res)) return;
   const reference = String((req.body && req.body.reference) || '').trim().slice(0, 60);
   // A conservative shape check so the model only ever sees a scripture ref.
   if (!/^[1-3]?\s?[A-Za-z][A-Za-z .]{1,30}(\s\d{1,3})(:\d{1,3}(-\d{1,3})?)?$/.test(reference)) {

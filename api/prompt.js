@@ -1,12 +1,14 @@
 // Generates short journaling + prayer prompts for the morning flow.
 //   POST /api/prompt  { thankful, scripture } -> { journal, prayer }
 const MODEL = 'claude-sonnet-5';
+const { limited } = require('./_ratelimit');
 
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') { res.status(405).json({ error: 'POST only' }); return; }
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) { res.status(503).json({ error: 'not configured' }); return; }
+  if (await limited(req, res)) return;
   const thankful = String((req.body && req.body.thankful) || '').slice(0, 200);
   const scripture = String((req.body && req.body.scripture) || '').slice(0, 60);
 
