@@ -718,6 +718,10 @@ body[data-theme="ink"] .apple-btn { background: #fff; color: #000; border-color:
 
 /* Paywall */
 .pw-pro { font-style: normal; color: var(--red); }
+.pw-terms { margin: 14px 0 0; font-size: 11.5px; line-height: 1.5; color: var(--soft-ink); }
+.pw-links { margin: 8px 0 0; font-size: 12.5px; display: flex; gap: 8px; align-items: center; }
+.pw-links a { color: var(--accent); font-weight: 600; text-decoration: none; }
+.pw-links span { color: var(--soft-ink); }
 .pw-plans { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
 .pw-plan {
   display: flex; justify-content: space-between; align-items: center;

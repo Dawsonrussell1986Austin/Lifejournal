@@ -75,8 +75,10 @@ bridge reports "not configured"), so beta testing is unaffected.
 - Because the shell loads the live URL, **web fixes ship without a new build**. You
   only need to re-archive when the Swift shell itself changes (rare) or to bump the
   version for App Store review later.
-- First launch needs internet; after that WKWebView caches the app shell, and all
-  journal data is stored on-device (IndexedDB) with optional cloud sync via ☁ Sync.
+- First launch needs internet; after that a service worker (`web/sw.js`) caches the
+  app shell (HTML/JS/CSS) so the app opens and runs offline, and all journal data is
+  stored on-device (IndexedDB) with optional cloud sync via ☁ Sync. API calls
+  (`/api/*`) always go to the network and are never cached.
 
 ## Sign in with Apple + iCal (added later)
 

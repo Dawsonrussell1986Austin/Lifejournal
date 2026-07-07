@@ -205,6 +205,12 @@
       <p class="sync-note">Guided Bible studies and 12-week plans that LifeJournal creates for you — cultural context, Gospel connection, and application — are part of Pro. Your journal, planner, and handwriting stay free.</p>
       <div id="paywallPlans" class="pw-plans"></div>
       <p id="paywallStatus" class="sync-status"></p>
+      <p class="pw-terms">Payment is charged to your Apple ID at confirmation of purchase. Your subscription renews automatically at the price shown above unless you cancel at least 24 hours before the end of the current period. Manage or cancel anytime in your App Store account settings.</p>
+      <p class="pw-links">
+        <a href="/terms" target="_blank" rel="noopener">Terms of Use</a>
+        <span aria-hidden="true">·</span>
+        <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>
+      </p>
       <div class="modal-actions">
         <button id="paywallRestore" class="btn">Restore purchases</button>
         <button id="paywallClose" class="btn">Maybe later</button>
@@ -325,5 +331,14 @@
   <script src="js/iap.js?v=49"></script>
   <script src="js/native.js?v=49"></script>
   <script src="js/app.js?v=49"></script>
+  <script>
+    // Register the offline service worker (app shell caching). Ignored by
+    // browsers/contexts without service-worker support.
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+      });
+    }
+  </script>
 </body>
 </html>
