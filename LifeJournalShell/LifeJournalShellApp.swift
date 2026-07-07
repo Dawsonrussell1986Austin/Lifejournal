@@ -49,7 +49,7 @@ struct OfflineView: View {
                     .font(.headline)
                     .padding(.horizontal, 28)
                     .padding(.vertical, 12)
-                    .background(Color(red: 0.184, green: 0.290, blue: 0.231))
+                    .background(Color(red: 0.710, green: 0.384, blue: 0.247))
                     .foregroundStyle(.white)
                     .clipShape(Capsule())
             }
