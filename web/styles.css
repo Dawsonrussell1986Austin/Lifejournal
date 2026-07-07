@@ -421,6 +421,18 @@ body[data-theme="ink"] .toolbar { background: #1c2330; border: 1px solid #262e3c
 .nj-intro { margin: 4px 0 4px; color: var(--soft-ink); font-size: 14px; line-height: 1.5; }
 .nj-range { margin: 8px 0 0; color: var(--accent); font-size: 13px; font-weight: 600; min-height: 18px; }
 
+/* First-run welcome */
+.welcome-kicker { display: block; font-size: 10px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+.welcome-h { margin: 0 0 12px; font-family: var(--serif); font-size: 26px; line-height: 1.15; color: var(--ink); }
+.welcome-lede { margin: 0 0 20px; color: var(--soft-ink); font-size: 15px; line-height: 1.55; }
+.welcome-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 16px; }
+.welcome-list li { display: flex; gap: 14px; align-items: flex-start; }
+.welcome-num { flex: 0 0 auto; width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
+.welcome-list strong { display: block; font-size: 15px; color: var(--ink); margin-bottom: 2px; }
+.welcome-list span:not(.welcome-num) { display: block; font-size: 13.5px; color: var(--soft-ink); line-height: 1.5; }
+#welcomeModal .modal-actions { justify-content: stretch; }
+#welcomeModal .modal-actions .btn { flex: 1; }
+
 .cover-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .cover-swatch { height: 60px; border-radius: 12px; cursor: pointer; border: 3px solid transparent; position: relative; }
 .cover-swatch.active { border-color: var(--ink); }
@@ -730,6 +742,13 @@ body[data-theme="ink"] .apple-btn { background: #fff; color: #000; border-color:
 .study-loading { display: flex; align-items: center; gap: 12px; color: var(--soft-ink); }
 .lj-spinner { flex: 0 0 auto; width: 20px; height: 20px; border-radius: 50%; border: 2.5px solid var(--faint); border-top-color: var(--accent); animation: ljspin .8s linear infinite; }
 @keyframes ljspin { to { transform: rotate(360deg); } }
+
+/* PDF export progress overlay */
+.export-overlay { position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.45); }
+.export-box { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 28px 34px; border-radius: 16px; background: var(--paper, #fff); box-shadow: 0 12px 40px rgba(0,0,0,.28); }
+.export-box .lj-spinner { width: 34px; height: 34px; border-width: 3.5px; }
+.export-msg { font-size: 15px; color: var(--ink, #2c2c2c); font-variant-numeric: tabular-nums; }
+
 @media (max-width: 640px) {
   #studiesModal { padding: 0; }
   #studiesModal .modal-card {

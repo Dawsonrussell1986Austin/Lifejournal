@@ -2759,9 +2759,21 @@
       flushSave();
       const n = state.journal.pages.length;
       if (n > 60 && !confirm(`This journal has ${n} pages. Building one PDF may take a while and produce a large file. Continue?`)) return;
-      toast('Building PDF…');
-      try { await LJPDF.exportJournal(state.journal); }
-      catch (err) { toast('PDF export failed — ' + err.message); }
+      const overlay = document.createElement('div');
+      overlay.className = 'export-overlay';
+      overlay.innerHTML = '<div class="export-box"><div class="lj-spinner"></div><div class="export-msg">Building PDF…</div></div>';
+      document.body.appendChild(overlay);
+      const msg = overlay.querySelector('.export-msg');
+      try {
+        await LJPDF.exportJournal(state.journal, (done, tot) => {
+          msg.textContent = `Building PDF… page ${done} of ${tot}`;
+        });
+        toast('PDF ready');
+      } catch (err) {
+        toast('PDF export failed — ' + err.message);
+      } finally {
+        overlay.remove();
+      }
     };
 
     window.addEventListener('resize', () => {
@@ -2792,7 +2804,25 @@
     LJData.setPalette(savedTheme === 'ink' ? 'dark' : 'light');
     if (savedTheme === 'ink') state.color = INK_DEFAULT;
     init();
-    maybeMorningFlow();
+    if (!maybeWelcome()) maybeMorningFlow();
+  }
+
+  // A one-time intro for brand-new users explaining the 12-week idea. Returns
+  // true if it took over the launch (so we skip the morning flow this time).
+  function maybeWelcome() {
+    const WELCOME_FLAG = 'lifejournal.welcomed';
+    if (LJKV.get(WELCOME_FLAG)) return false;
+    LJKV.set(WELCOME_FLAG, '1');
+    const modal = $('#welcomeModal');
+    if (!modal) return false;
+    modal.classList.remove('hidden');
+    $('#welcomeStart').onclick = () => {
+      modal.classList.add('hidden');
+      const first = state.lib.journals.find((j) => j.kind === 'planner');
+      if (first) openJournal(first.id);
+      else openNewJournal();
+    };
+    return true;
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootstrap);

@@ -46,18 +46,26 @@ window.LJPDF = (function () {
     return im;                                                // null → template draws placeholder
   }
 
-  async function exportJournal(journal) {
+  async function exportJournal(journal, onProgress) {
     await ensureLib();
     const { jsPDF } = window.jspdf;
     const { W, H } = LJData.PAGE;
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: [W, H] });
-    for (let i = 0; i < journal.pages.length; i++) {
+    const total = journal.pages.length;
+    // A little lighter than screen (1.6× / q0.85) keeps text crisp while
+    // holding a 100+ page cycle journal to a reasonable size.
+    const scale = total > 40 ? 1.6 : 2;
+    for (let i = 0; i < total; i++) {
       const page = journal.pages[i];
       if (i > 0) pdf.addPage([W, H], 'portrait');
       let photo = null;
       if (page.template === 'planMonth') photo = await loadMonthPhoto(journal, page.month);
-      const canvas = JournalCanvas.renderPageCanvas(page, journal, 2, photo);
-      pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, W, H);
+      const canvas = JournalCanvas.renderPageCanvas(page, journal, scale, photo);
+      pdf.addImage(canvas.toDataURL('image/jpeg', 0.85), 'JPEG', 0, 0, W, H);
+      if (onProgress) onProgress(i + 1, total);
+      // Yield to the event loop so the progress UI paints and the tab stays
+      // responsive instead of freezing for the whole export.
+      if (i % 2 === 1) await new Promise((r) => setTimeout(r, 0));
     }
     const name = (journal.title || 'Life Journal').replace(/[\\/:*?"<>|]/g, '-');
     pdf.save(name + '.pdf');
