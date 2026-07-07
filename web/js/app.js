@@ -1715,21 +1715,8 @@
     }
     wrap.appendChild(top);
 
-    // foundations chips
-    const chips = el('div', 'm-chips');
-    SIDE_FND.forEach((lab, i) => {
-      const id = 'fnd' + i;
-      const c = el('button', 'm-chip' + (state.checks[id] ? ' on' : ''), lab);
-      c.onclick = () => {
-        if (state.checks[id]) delete state.checks[id]; else state.checks[id] = true;
-        recordChange(); saveCurrentDebounced(); renderMobileDay(); renderSideChips();
-      };
-      chips.appendChild(c);
-    });
-    wrap.appendChild(chips);
-
-    // Five Foundations — one action for today per foundation (from the plan).
     if (state.journal.cycle && window.LJPlanner) {
+      // Five Foundations — check off + one action for today per foundation.
       const fcard = el('div', 'm-card');
       const fhead = el('div', 'm-label m-sched-head', 'Five Foundations · today');
       const sug = el('button', 'm-expand', '↻ Suggest');
@@ -1737,9 +1724,18 @@
       fhead.appendChild(sug);
       fcard.appendChild(fhead);
       SIDE_FND.forEach((lab, i) => {
+        const id = 'fnd' + i;
         const row = el('div', 'm-fnd-row');
-        row.appendChild(el('span', 'm-fnd-lab', lab));
-        row.appendChild(mobField('step' + i, 'm-fnd-in', 'Today I will…'));
+        const chk = el('button', 'm-check m-fnd-check' + (state.checks[id] ? ' on' : ''));
+        chk.onclick = () => {
+          if (state.checks[id]) delete state.checks[id]; else state.checks[id] = true;
+          recordChange(); saveCurrentDebounced(); renderMobileDay(); renderSideChips();
+        };
+        row.appendChild(chk);
+        const col = el('div', 'm-fnd-col');
+        col.appendChild(el('span', 'm-fnd-lab', lab));
+        col.appendChild(mobField('step' + i, 'm-fnd-in' + (state.checks[id] ? ' m-done' : ''), 'Today I will…'));
+        row.appendChild(col);
         fcard.appendChild(row);
       });
       wrap.appendChild(fcard);
@@ -1749,6 +1745,19 @@
         state.mobTodayFetched = page.date;
         suggestMobileFoundations(page, false);
       }
+    } else {
+      // Legacy year planners: the simple foundation chips.
+      const chips = el('div', 'm-chips');
+      SIDE_FND.forEach((lab, i) => {
+        const id = 'fnd' + i;
+        const c = el('button', 'm-chip' + (state.checks[id] ? ' on' : ''), lab);
+        c.onclick = () => {
+          if (state.checks[id]) delete state.checks[id]; else state.checks[id] = true;
+          recordChange(); saveCurrentDebounced(); renderMobileDay(); renderSideChips();
+        };
+        chips.appendChild(c);
+      });
+      wrap.appendChild(chips);
     }
 
     // schedule card — condensed: filled hours + the current hour; expandable
