@@ -934,16 +934,27 @@
     // loadTodaySuggestions() upgrades these to a specific action for today.
     const seededSteps = SIDE_FND.map((_, i) => (cyc ? (ctx.weekly['goal' + i] || '') : ''));
     flow.seededSteps = seededSteps.slice();
+    // Weekly review: on the first day of weeks 2–12, score last week and
+    // confirm this week's focus. Only when there's a plan to review.
+    flow.review = null;
+    if (cyc && cyc.day > 1 && (cyc.day - 1) % 7 === 0) {
+      const rv = buildReviewContext(planner, cyc);
+      if (rv.hasPlan) flow.review = rv;
+    }
     flow.data = {
       reviewChecks: Object.assign({}, ctx.yChecks),
       reviewNote: '', thank: '', tops: ['', '', ''], scr: '', journal: '', prayer: '',
       sch: {}, steps: seededSteps, remindTime: '07:00',
-      cycleGoals: cyc ? LJData.FOUNDATIONS.map((F, i) => ctx.goals['g' + i + 'goal'] || '') : []
+      cycleGoals: cyc ? LJData.FOUNDATIONS.map((F, i) => ctx.goals['g' + i + 'goal'] || '') : [],
+      lastScore: flow.review ? (flow.review.priorScore || '') : '',
+      thisFocus: flow.review ? flow.review.thisCommit.slice() : []
     };
     const hasYesterday = !!(ctx.ypage && (ctx.yFields.top0 || ctx.yFields.top1 || ctx.yFields.top2));
     flow.steps = [];
-    // On day 1 of a cycle, the ritual opens with goal-setting.
+    // On day 1 of a cycle, the ritual opens with goal-setting; on the first
+    // day of a new week, with the weekly review.
     if (cyc && cyc.day === 1) flow.steps.push('cyclegoals');
+    else if (flow.review) flow.steps.push('weekreview');
     if (hasYesterday) flow.steps.push('review');
     flow.steps.push('thank', 'scripture', 'tops', 'journal', 'schedule', 'foundations');
     if (window.LJNotify && LJNotify.available() && !LJKV.get('lifejournal.reminder')) flow.steps.push('reminder');
@@ -1010,6 +1021,26 @@
     return null;
   }
 
+  // Context for the weekly review: last week's commitments + its planWeek
+  // page (for the execution score) and this week's commitments to confirm.
+  function buildReviewContext(journal, cyc) {
+    const lastIdx = cyc.week - 2, thisIdx = cyc.week - 1;   // 0-based week indices
+    const lastWS = LJPlanner.cycleWeekStartISO(journal.startISO, lastIdx);
+    const thisWS = LJPlanner.cycleWeekStartISO(journal.startISO, thisIdx);
+    const wf = (ws) => journal.pages.find((p) => p.template === 'weeklyFoundations' && p.weekStart === ws);
+    const pw = (ws) => journal.pages.find((p) => p.template === 'planWeek' && p.weekStart === ws);
+    const commits = (page) => { const f = page ? (LJStore.loadPageData(page.id).fields || {}) : {}; return SIDE_FND.map((_, i) => f['goal' + i] || ''); };
+    const lastWeekly = wf(lastWS), thisWeekly = wf(thisWS), lastPlanWeek = pw(lastWS);
+    const lastCommit = commits(lastWeekly), thisCommit = commits(thisWeekly);
+    const priorScore = lastPlanWeek ? ((LJStore.loadPageData(lastPlanWeek.id).fields || {}).wkscore || '') : '';
+    return {
+      lastWeek: cyc.week - 1, lastPlanWeekId: lastPlanWeek && lastPlanWeek.id,
+      thisWeeklyId: thisWeekly && thisWeekly.id,
+      lastCommit: lastCommit, thisCommit: thisCommit, priorScore: priorScore,
+      hasPlan: lastCommit.some(Boolean) || thisCommit.some(Boolean)
+    };
+  }
+
   // Morning-flow wrapper: prefill each "Today I will…" (editable), keeping the
   // weekly commitment as the baseline until today's suggestions arrive.
   async function loadTodaySuggestions(force) {
@@ -1063,6 +1094,42 @@
       const note = mfInputRow((v) => (v === undefined ? d.reviewNote : (d.reviewNote = v)), 'One line — how did it go?');
       note.classList.add('mf-serifin');
       body.appendChild(note);
+    } else if (kind === 'weekreview') {
+      const rv = flow.review;
+      body.appendChild(mfLabel(`Week ${flow.cyc.week - 1} in review — how did last week go?`));
+      // Score last week's execution.
+      const scoreWrap = el('div', 'mf-score');
+      scoreWrap.appendChild(el('span', 'mf-score-lab', 'Last week I completed'));
+      const scoreInp = el('input', 'mf-score-in');
+      scoreInp.type = 'number'; scoreInp.min = '0'; scoreInp.max = '100';
+      scoreInp.value = d.lastScore || '';
+      scoreInp.placeholder = '—';
+      scoreInp.addEventListener('input', () => { d.lastScore = scoreInp.value; });
+      scoreWrap.appendChild(scoreInp);
+      scoreWrap.appendChild(el('span', 'mf-score-lab', '% of my plan'));
+      body.appendChild(scoreWrap);
+      // Show last week's commitments for context.
+      const anyLast = rv.lastCommit.some(Boolean);
+      if (anyLast) {
+        const rec = el('div', 'mf-recap');
+        SIDE_FND.forEach((name, i) => {
+          if (!rv.lastCommit[i]) return;
+          const row = el('div', 'mf-recap-row');
+          row.appendChild(el('span', 'mf-fnd-lab', name));
+          row.appendChild(el('span', 'mf-recap-txt', escapeHtml(rv.lastCommit[i])));
+          rec.appendChild(row);
+        });
+        body.appendChild(rec);
+      }
+      // Confirm / edit this week's focus.
+      body.appendChild(el('div', 'mf-subhead', 'This week’s focus'));
+      SIDE_FND.forEach((name, i) => {
+        const sec = el('div', 'mf-fnd');
+        sec.appendChild(el('div', 'mf-fnd-name', name));
+        const inp = mfInputRow((v) => (v === undefined ? d.thisFocus[i] : (d.thisFocus[i] = v)), 'This week I will…');
+        sec.appendChild(inp);
+        body.appendChild(sec);
+      });
     } else if (kind === 'cyclegoals') {
       body.appendChild(mfLabel('First — set your Five Foundations goals for these 12 weeks.'));
       body.appendChild(el('p', 'mf-sub', 'One goal per foundation. You can refine each — and let LifeJournal build out the plan — on its own page later.'));
@@ -1239,6 +1306,20 @@
 
   function finishFlow() {
     const d = flow.data;
+    // Weekly review → last week's execution score + this week's focus.
+    if (flow.review) {
+      const rv = flow.review;
+      if (rv.lastPlanWeekId && String(d.lastScore).trim() !== '') {
+        const pd = LJStore.loadPageData(rv.lastPlanWeekId); pd.fields = pd.fields || {};
+        pd.fields.wkscore = String(Math.max(0, Math.min(100, parseInt(d.lastScore, 10) || 0)));
+        LJStore.savePageData(rv.lastPlanWeekId, pd);
+      }
+      if (rv.thisWeeklyId) {
+        const wd = LJStore.loadPageData(rv.thisWeeklyId); wd.fields = wd.fields || {};
+        (d.thisFocus || []).forEach((v, i) => { if (v && v.trim()) wd.fields['goal' + i] = v.trim(); });
+        LJStore.savePageData(rv.thisWeeklyId, wd);
+      }
+    }
     // Day-1 cycle goals → each foundation's blueprint page (WHAT), without
     // clobbering a richer AI-drafted goal already on the page.
     if (d.cycleGoals && d.cycleGoals.length && flow.planner.cycle) {
@@ -1719,32 +1800,43 @@
       // Five Foundations — check off + one action for today per foundation.
       const fcard = el('div', 'm-card');
       const fhead = el('div', 'm-label m-sched-head', 'Five Foundations · today');
-      const sug = el('button', 'm-expand', '↻ Suggest');
-      sug.onclick = () => suggestMobileFoundations(page, true);
-      fhead.appendChild(sug);
       fcard.appendChild(fhead);
-      SIDE_FND.forEach((lab, i) => {
-        const id = 'fnd' + i;
-        const row = el('div', 'm-fnd-row');
-        const chk = el('button', 'm-check m-fnd-check' + (state.checks[id] ? ' on' : ''));
-        chk.onclick = () => {
-          if (state.checks[id]) delete state.checks[id]; else state.checks[id] = true;
-          recordChange(); saveCurrentDebounced(); renderMobileDay(); renderSideChips();
-        };
-        row.appendChild(chk);
-        const col = el('div', 'm-fnd-col');
-        col.appendChild(el('span', 'm-fnd-lab', lab));
-        col.appendChild(mobField('step' + i, 'm-fnd-in' + (state.checks[id] ? ' m-done' : ''), 'Today I will…'));
-        row.appendChild(col);
-        fcard.appendChild(row);
-      });
-      wrap.appendChild(fcard);
-      // Auto-suggest once per day when there's a plan and nothing filled yet.
-      const anyStep = SIDE_FND.some((_, i) => (state.fields['step' + i] || '').trim());
-      if (!anyStep && state.mobTodayFetched !== page.date) {
-        state.mobTodayFetched = page.date;
-        suggestMobileFoundations(page, false);
+      // Empty state: no goals/plan yet → nudge toward setting them.
+      const fctx = foundationPlanContext(state.journal, page.date);
+      const hasPlan = SIDE_FND.some((_, i) => fctx.goals['g' + i + 'goal'] || fctx.weekly['goal' + i]);
+      const anyStepFilled = SIDE_FND.some((_, i) => (state.fields['step' + i] || '').trim());
+      if (!hasPlan && !anyStepFilled) {
+        // Empty state — point them to goal-setting.
+        fcard.appendChild(el('p', 'm-intro', 'Set a goal for each foundation and LifeJournal will suggest what to do each day.'));
+        const nudge = el('button', 'm-fnd-nudge', 'Set your Five Foundations goals →');
+        nudge.onclick = () => goToGoals();
+        fcard.appendChild(nudge);
+      } else {
+        const sug = el('button', 'm-expand', '↻ Suggest');
+        sug.onclick = () => suggestMobileFoundations(page, true);
+        fhead.appendChild(sug);
+        SIDE_FND.forEach((lab, i) => {
+          const id = 'fnd' + i;
+          const row = el('div', 'm-fnd-row');
+          const chk = el('button', 'm-check m-fnd-check' + (state.checks[id] ? ' on' : ''));
+          chk.onclick = () => {
+            if (state.checks[id]) delete state.checks[id]; else state.checks[id] = true;
+            recordChange(); saveCurrentDebounced(); renderMobileDay(); renderSideChips();
+          };
+          row.appendChild(chk);
+          const col = el('div', 'm-fnd-col');
+          col.appendChild(el('span', 'm-fnd-lab', lab));
+          col.appendChild(mobField('step' + i, 'm-fnd-in' + (state.checks[id] ? ' m-done' : ''), 'Today I will…'));
+          row.appendChild(col);
+          fcard.appendChild(row);
+        });
+        // Auto-suggest once per day when there's a plan and nothing filled yet.
+        if (!anyStepFilled && state.mobTodayFetched !== page.date) {
+          state.mobTodayFetched = page.date;
+          suggestMobileFoundations(page, false);
+        }
       }
+      wrap.appendChild(fcard);
     } else {
       // Legacy year planners: the simple foundation chips.
       const chips = el('div', 'm-chips');
@@ -1976,6 +2068,25 @@
 
     // Apple Calendar events on the daily schedule (via the iOS shell)
     renderCalEvents(page, layer, s);
+
+    // 12-Week Overview: show each past week's execution score at a glance.
+    if (page.template === 'planCycle' && page.startISO) {
+      LJPlanner.cycleWeekRects(page.startISO).forEach((wr) => {
+        const wp = state.journal.pages.find((p) => p.template === 'planWeek' && p.weekStart === wr.weekStart);
+        if (!wp) return;
+        const raw = (LJStore.loadPageData(wp.id).fields || {}).wkscore;
+        const score = parseInt(raw, 10);
+        if (isNaN(score)) return;
+        const pct = Math.max(0, Math.min(100, score));
+        const badge = el('div', 'lj-wkscore');
+        badge.style.left = ((wr.x + wr.w) * s - 150) + 'px';
+        badge.style.top = (wr.y * s) + 'px';
+        badge.style.width = '150px';
+        badge.style.height = (wr.h * s) + 'px';
+        badge.innerHTML = `<span class="trk"><i style="width:${pct}%"></i></span><b>${pct}%</b>`;
+        layer.appendChild(badge);
+      });
+    }
 
     // "Draft with AI" on a Foundation Blueprint page
     if (page.template === 'foundationBlueprint') {

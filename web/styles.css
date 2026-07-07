@@ -561,6 +561,10 @@ body[data-theme="ink"] .m-suggest { background: #12161e; }
   border-radius: 999px; padding: 5px 12px; font-size: 11.5px; font-weight: 700; letter-spacing: .5px;
 }
 .lj-study:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+.lj-wkscore { position: absolute; display: flex; align-items: center; justify-content: flex-end; gap: 8px; pointer-events: none; }
+.lj-wkscore .trk { width: 56px; height: 4px; border-radius: 2px; background: var(--faint); overflow: hidden; }
+.lj-wkscore .trk i { display: block; height: 100%; background: var(--accent); }
+.lj-wkscore b { font-size: 12px; font-weight: 700; color: var(--soft-ink); min-width: 30px; text-align: right; }
 .lj-ai-plan { position: absolute; pointer-events: auto; cursor: pointer; background: transparent; border: none; border-radius: 999px; }
 .lj-ai-plan:hover { background: rgba(255, 255, 255, 0.14); }
 body[data-theme="ink"] .lj-study { background: #161f1a; border-color: rgba(90,140,110,.4); color: #9fcdb0; }
@@ -648,6 +652,14 @@ body[data-theme="ink"] .mf-card { box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5); }
 .mf-sched-in { font-size: 15px; padding: 7px 0; }
 .mf-fnd-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .mf-again { border: none; background: none; cursor: pointer; color: var(--accent); font-size: 12px; font-weight: 700; white-space: nowrap; padding: 0; }
+.mf-score { display: flex; align-items: center; gap: 10px; margin: 4px 0 16px; }
+.mf-score-lab { font-family: var(--serif); font-size: 17px; color: var(--ink); }
+.mf-score-in { width: 74px; border: none; border-bottom: 2px solid var(--accent); outline: none; background: transparent; font-family: var(--serif); font-size: 26px; font-weight: 600; color: var(--accent); text-align: center; padding: 2px 0; }
+.mf-recap { background: var(--panel-2); border-radius: 14px; padding: 12px 14px; margin-bottom: 18px; }
+.mf-recap-row { display: flex; gap: 12px; padding: 4px 0; }
+.mf-recap-txt { flex: 1; font-family: var(--serif); font-size: 15px; color: var(--soft-ink); }
+.mf-subhead { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--soft-ink); margin: 6px 0 4px; }
+.m-fnd-nudge { border: 1px dashed var(--rule); border-radius: 12px; padding: 12px; margin-top: 8px; background: none; cursor: pointer; color: var(--accent); font-weight: 700; font-size: 14px; width: 100%; }
 .mf-again:hover { text-decoration: underline; }
 .mf-fnd { padding: 10px 0 6px; border-bottom: 1px solid var(--faint); }
 .mf-fnd:last-child { border-bottom: none; }
