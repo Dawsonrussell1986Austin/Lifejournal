@@ -20,6 +20,9 @@ enum IAP {
 
 final class IAPBridge: NSObject, WKScriptMessageHandler {
     weak var webView: WKWebView?
+    // Packages from the last offerings fetch, so a purchase can go straight to
+    // StoreKit without another round-trip (which could spuriously fail).
+    private var cachedPackages: [Package] = []
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         guard let dict = message.body as? [String: Any],
@@ -59,6 +62,7 @@ final class IAPBridge: NSObject, WKScriptMessageHandler {
     private func offerings(_ id: String) {
         Purchases.shared.getOfferings { offerings, error in
             if let error = error { self.send(id, ["error": error.localizedDescription]); return }
+            self.cachedPackages = offerings?.current?.availablePackages ?? []
             let packages = (offerings?.current?.availablePackages ?? []).map { pkg -> [String: Any] in
                 [
                     "id": pkg.identifier,
@@ -74,17 +78,28 @@ final class IAPBridge: NSObject, WKScriptMessageHandler {
     }
 
     private func purchase(_ id: String, pkg: String) {
+        // Use the package we already fetched for the paywall when we have it;
+        // only re-fetch offerings as a fallback.
+        if let package = cachedPackages.first(where: { $0.identifier == pkg }) {
+            buy(id, package: package)
+            return
+        }
         Purchases.shared.getOfferings { offerings, error in
-            guard let package = offerings?.current?.availablePackages.first(where: { $0.identifier == pkg }) else {
+            self.cachedPackages = offerings?.current?.availablePackages ?? []
+            guard let package = self.cachedPackages.first(where: { $0.identifier == pkg }) else {
                 self.send(id, ["error": error?.localizedDescription ?? "That plan isn’t available right now."])
                 return
             }
-            Purchases.shared.purchase(package: package) { _, info, error, cancelled in
-                if cancelled { self.send(id, ["cancelled": true]); return }
-                if let error = error { self.send(id, ["error": error.localizedDescription]); return }
-                let pro = info?.entitlements[IAP.entitlement]?.isActive == true
-                self.send(id, ["pro": pro])
-            }
+            self.buy(id, package: package)
+        }
+    }
+
+    private func buy(_ id: String, package: Package) {
+        Purchases.shared.purchase(package: package) { _, info, error, cancelled in
+            if cancelled { self.send(id, ["cancelled": true]); return }
+            if let error = error { self.send(id, ["error": error.localizedDescription]); return }
+            let pro = info?.entitlements[IAP.entitlement]?.isActive == true
+            self.send(id, ["pro": pro])
         }
     }
 

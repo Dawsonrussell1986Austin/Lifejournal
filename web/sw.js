@@ -5,7 +5,7 @@
 //   • same-origin static assets→ cache-first, populated at runtime
 //
 // Versioned per release so a new deploy replaces the old cache on activate.
-const CACHE = 'lifejournal-v49';
+const CACHE = 'lifejournal-v50';
 const SHELL = '/index.html';
 
 self.addEventListener('install', (event) => {

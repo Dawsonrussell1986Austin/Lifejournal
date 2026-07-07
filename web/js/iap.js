@@ -24,12 +24,24 @@ window.LJIAP = (function () {
     if (r) { delete pending[id]; r(payload); }
   }
 
-  // Unlocked when: not in the shell, shell not configured yet, or entitled.
+  // Remember the last entitlement the shell actually confirmed, so a dropped
+  // or timed-out status message doesn't silently unlock Pro (revenue leak) —
+  // we fall back to what we last knew for sure instead.
+  const CACHE_KEY = 'lifejournal.pro.cache';
+  function cachedPro() { try { return localStorage.getItem(CACHE_KEY) === '1'; } catch (e) { return false; } }
+  function setCachedPro(v) { try { localStorage.setItem(CACHE_KEY, v ? '1' : '0'); } catch (e) {} }
+
+  // Unlocked when: not in the shell, or the shell isn't configured yet (dev/
+  // beta). Inside a configured shell, entitlement comes from StoreKit; if that
+  // status can't be reached we fall back to the last confirmed state.
   async function isPro() {
     if (!available()) return true;
     const s = await call('status');
-    if (!s || s.configured === false) return true;
-    return !!s.pro;
+    if (!s) return cachedPro();            // lost/timed-out message → last known-good
+    if (s.configured === false) return true;
+    const pro = !!s.pro;
+    setCachedPro(pro);                      // confirmed by StoreKit — remember it
+    return pro;
   }
 
   return {

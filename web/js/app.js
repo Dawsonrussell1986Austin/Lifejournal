@@ -2645,6 +2645,15 @@
       if (r && r.pro) { $('#paywallModal').classList.add('hidden'); toast('Pro restored ✦'); }
       else $('#paywallStatus').textContent = (r && r.error) || 'No previous purchase found for this Apple ID.';
     };
+    // A standalone Restore, for an entitled user whose status didn't auto-resolve.
+    $('#restoreBtn').onclick = async () => {
+      if (!(window.LJIAP && LJIAP.available())) { toast('Restore works inside the iPhone / iPad app'); return; }
+      $('#moreMenu').classList.add('hidden');
+      toast('Restoring purchases…');
+      const r = await LJIAP.restore();
+      if (r && r.pro) toast('Pro restored ✦');
+      else toast((r && r.error) || 'No previous purchase found for this Apple ID.');
+    };
     $('#searchClose').onclick = () => $('#searchModal').classList.add('hidden');
     $('#searchInput').addEventListener('input', () => runSearch($('#searchInput').value));
     $('#moreBtn').onclick = () => {

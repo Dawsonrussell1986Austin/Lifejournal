@@ -13,6 +13,24 @@ final class AuthBridge: NSObject, WKScriptMessageHandler,
     private let idKey = "lj.appleUserId"
     private let nameKey = "lj.appleName"
 
+    override init() {
+        super.init()
+        revalidateCredentialState()
+    }
+
+    // If the user revoked Sign in with Apple in iOS Settings, our stored id is
+    // stale — clear it on launch so the app doesn't believe it's still signed in.
+    private func revalidateCredentialState() {
+        let d = UserDefaults.standard
+        guard let uid = d.string(forKey: idKey), !uid.isEmpty else { return }
+        ASAuthorizationAppleIDProvider().getCredentialState(forUserID: uid) { [weak self] state, _ in
+            guard let self = self, state == .revoked || state == .notFound else { return }
+            let d = UserDefaults.standard
+            d.removeObject(forKey: self.idKey)
+            d.removeObject(forKey: self.nameKey)
+        }
+    }
+
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         guard let dict = message.body as? [String: Any],
               let id = dict["id"] as? String,
