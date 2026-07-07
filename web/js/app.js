@@ -1215,35 +1215,38 @@
       body.appendChild(pta);
       loadFlowPrompts(jp, pp);
     } else if (kind === 'schedule') {
-      body.appendChild(mfLabel('Let’s time block your day'));
+      const head = el('div', 'mf-fnd-head');
+      head.appendChild(mfLabel('Let’s time block your day'));
+      head.appendChild(schedGranSelect(() => renderFlowStep()));
+      body.appendChild(head);
       const grid = el('div', 'mf-sched');
-      const hours = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22];
       const evts = (calOn() && calCache[flow.iso]) || [];
+      const slots = schedSlots();
       const cells = [];
-      hours.forEach((h, i) => {
+      slots.forEach((s, i) => {
         const row = el('div', 'mf-sched-row');
-        row.appendChild(el('span', 'm-hour', mobHourLabel(h)));
+        row.appendChild(el('span', 'm-hour' + (s.m ? ' m-hour-sub' : ''), s.label));
         const cell = el('div', 'sched-cell');
         const inp = el('input', 'mf-input mf-sched-in');
         inp.type = 'text';
-        const evt = evts.find((e) => !e.allDay && Math.floor(e.startH) === h);
-        if (d.sch['sch' + i] === undefined && evt) d.sch['sch' + i] = evt.title;
-        inp.value = d.sch['sch' + i] || '';
+        const evt = s.m === 0 && evts.find((e) => !e.allDay && Math.floor(e.startH) === s.h);
+        if (d.sch[s.key] === undefined && evt) d.sch[s.key] = evt.title;
+        inp.value = d.sch[s.key] || '';
         if (evt) inp.placeholder = evt.title;
         cell.appendChild(inp);
         cell.appendChild(el('span', 'sched-ditto', '↓'));
         row.appendChild(cell);
         grid.appendChild(row);
-        cells.push({ cell: cell, inp: inp, i: i });
-        inp.addEventListener('input', () => { d.sch['sch' + i] = inp.value; refreshDitto(); });
+        cells.push({ cell: cell, inp: inp, key: s.key, prevKey: i > 0 ? slots[i - 1].key : null });
+        inp.addEventListener('input', () => { d.sch[s.key] = inp.value; refreshDitto(); });
         inp.addEventListener('focus', () => cell.classList.remove('is-dup'));
         inp.addEventListener('blur', refreshDitto);
       });
       // A repeated slot shows a continuation arrow instead of the duplicate text.
       function refreshDitto() {
         cells.forEach((c) => {
-          const cur = (d.sch['sch' + c.i] || '').trim();
-          const prev = c.i > 0 ? (d.sch['sch' + (c.i - 1)] || '').trim() : '';
+          const cur = (d.sch[c.key] || '').trim();
+          const prev = c.prevKey ? (d.sch[c.prevKey] || '').trim() : '';
           const dup = cur && prev && cur === prev && document.activeElement !== c.inp;
           c.cell.classList.toggle('is-dup', dup);
         });
@@ -1707,6 +1710,29 @@
   // ---------- Phone-native daily view ----------
   const MOB_HOURS = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22];
   const mobHourLabel = (h) => (h < 12 ? h + 'a' : h === 12 ? '12p' : (h - 12) + 'p');
+  // Daily time-block granularity (minutes). Default 60 reproduces the original
+  // hourly schedule exactly (same sch0..17 field keys → still on the PDF page);
+  // finer values add sub-hour rows (keyed separately) on the phone surfaces.
+  function schedGran() { const v = parseInt(LJKV.get('lifejournal.schedgran') || '60', 10); return [15, 20, 30, 60].indexOf(v) >= 0 ? v : 60; }
+  function schedSlots() {
+    const g = schedGran(), out = [];
+    for (let h = 5; h <= 22; h++) {
+      for (let m = 0; m < 60; m += g) {
+        out.push({ h: h, m: m, key: m === 0 ? ('sch' + (h - 5)) : ('schx' + h + '_' + m),
+                   label: m === 0 ? mobHourLabel(h) : ':' + (m < 10 ? '0' + m : m) });
+      }
+    }
+    return out;
+  }
+  function schedGranSelect(onChange) {
+    const sel = el('select', 'sched-gran');
+    [[60, '1 hour'], [30, '30 min'], [20, '20 min'], [15, '15 min']].forEach((o) => {
+      const opt = el('option'); opt.value = o[0]; opt.textContent = o[1];
+      if (o[0] === schedGran()) opt.selected = true; sel.appendChild(opt);
+    });
+    sel.onchange = () => { LJKV.set('lifejournal.schedgran', sel.value); onChange(); };
+    return sel;
+  }
   function isPhone() { return window.matchMedia('(max-width: 640px)').matches; }
   function mobileEligible() {
     const p = state.journal && currentPage();
@@ -1931,33 +1957,41 @@
     // schedule card — condensed: filled hours + the current hour; expandable
     const sched = el('div', 'm-card');
     const shead = el('div', 'm-label m-sched-head', 'Schedule · 5 am – 10 pm');
+    const sctrls = el('div', 'm-sched-ctrls');
+    sctrls.appendChild(schedGranSelect(() => renderMobileDay()));
     const expand = el('button', 'm-expand', state.mobAllHours ? 'Filled only' : 'All hours');
     expand.onclick = () => { state.mobAllHours = !state.mobAllHours; renderMobileDay(); };
-    shead.appendChild(expand);
+    sctrls.appendChild(expand);
+    shead.appendChild(sctrls);
     sched.appendChild(shead);
     const isToday = page.date && window.LJPlanner && page.date === LJPlanner.todayISO();
     const nowH = new Date().getHours();
     const dayEvents = (calOn() && page.date && calCache[page.date]) || [];
     const evtHours = {};
     dayEvents.forEach((e) => { if (!e.allDay) (evtHours[Math.floor(e.startH)] = evtHours[Math.floor(e.startH)] || []).push(e); });
+    const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+    const gran = schedGran();
     let any = false;
-    MOB_HOURS.forEach((h, i) => {
-      const id = 'sch' + i;
-      const isNow = isToday && h === nowH;
-      const evts = evtHours[h] || [];
+    const slots = schedSlots();
+    slots.forEach((s, i) => {
+      const id = s.key;
+      const slotMin = s.h * 60 + s.m;
+      const isNow = isToday && nowMin >= slotMin && nowMin < slotMin + gran;
+      const evts = s.m === 0 ? (evtHours[s.h] || []) : [];
       if (!state.mobAllHours && !state.fields[id] && !isNow && !evts.length) return;
       any = true;
       const row = el('div', 'm-row m-sched-row' + (isNow ? ' m-now' : ''));
-      row.appendChild(el('span', 'm-hour', mobHourLabel(h)));
+      row.appendChild(el('span', 'm-hour' + (s.m ? ' m-hour-sub' : ''), s.label));
       const cell = el('div', 'sched-cell');
       const f = mobField(id, '');
       cell.appendChild(f);
       cell.appendChild(el('span', 'sched-ditto', '↓'));
-      const cur = (state.fields[id] || '').trim(), prev = (state.fields['sch' + (i - 1)] || '').trim();
+      const prevKey = i > 0 ? slots[i - 1].key : null;
+      const cur = (state.fields[id] || '').trim(), prev = prevKey ? (state.fields[prevKey] || '').trim() : '';
       if (cur && prev && cur === prev) cell.classList.add('is-dup');
       f.addEventListener('focus', () => cell.classList.remove('is-dup'));
       f.addEventListener('blur', () => {
-        const c = (state.fields[id] || '').trim(), p = (state.fields['sch' + (i - 1)] || '').trim();
+        const c = (state.fields[id] || '').trim(), p = prevKey ? (state.fields[prevKey] || '').trim() : '';
         cell.classList.toggle('is-dup', !!(c && p && c === p));
       });
       row.appendChild(cell);

@@ -543,6 +543,9 @@ body[data-theme="ink"] .m-suggest { background: #12161e; }
 .sched-cell .sched-ditto { display: none; position: absolute; left: 2px; top: 50%; transform: translateY(-50%); color: var(--soft-ink); opacity: .45; font-size: 18px; pointer-events: none; }
 .sched-cell.is-dup .mf-sched-in, .sched-cell.is-dup .m-input { color: transparent; }
 .sched-cell.is-dup .sched-ditto { display: block; }
+.sched-gran { font-family: inherit; font-size: 12px; font-weight: 700; color: var(--accent); background: transparent; border: 1px solid var(--card-line); border-radius: 999px; padding: 4px 8px; cursor: pointer; text-transform: none; letter-spacing: 0; }
+.m-sched-ctrls { display: flex; align-items: center; gap: 8px; }
+.m-hour-sub { opacity: .6; font-weight: 500; }
 .m-ai-plan {
   border: none; cursor: pointer; border-radius: 999px; width: 100%;
   background: var(--accent); color: #fff; font-size: 15px; font-weight: 700;
