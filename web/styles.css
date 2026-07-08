@@ -138,8 +138,8 @@ body[data-theme="ink"] #library {
 .jcard-cross { color: rgba(255, 255, 255, 0.8); font-size: 16px; }
 .jcard-mono {
   display: none; width: 40px; height: 40px; border-radius: 11px;
-  background: rgba(90, 140, 110, 0.16); border: 1px solid rgba(90, 140, 110, 0.35);
-  color: #9fcdb0; font-family: var(--serif); font-size: 16px;
+  background: rgba(181, 98, 63, 0.16); border: 1px solid rgba(181, 98, 63, 0.35);
+  color: #d79c81; font-family: var(--serif); font-size: 16px;
   align-items: center; justify-content: center;
 }
 .jcard-mono em { font-style: normal; color: var(--red); }
@@ -372,7 +372,7 @@ body[data-theme="ink"] .toolbar { background: #1c2330; border: 1px solid #262e3c
 .lj-check.checked { background: var(--accent); border-color: var(--accent); }
 .lj-check.checked::after { content: '✓'; color: #fff; font-size: .82em; font-weight: 800; line-height: 1; }
 /* Five Foundations pill chips: the canvas draws the outline + label; the
-   overlay only becomes visible when checked (filled green, white label). */
+   overlay only becomes visible when checked (filled accent, white label). */
 .lj-check.pill { border-radius: 999px; color: transparent; font-weight: 700; letter-spacing: 1px; font-family: inherit; }
 .lj-check.pill.checked { background: var(--accent); border-color: var(--accent); color: #fff; }
 .lj-check.pill.checked::after { content: none; }
@@ -498,7 +498,7 @@ body[data-theme="ink"] .m-card { background: #161c26; border-color: #232b38; }
   background: rgba(219, 74, 51, 0.06); border: 1px solid rgba(219, 74, 51, 0.28);
 }
 body[data-theme="ink"] .m-banner { background: #221518; }
-body[data-theme="ink"] .m-scripture { background: #161f1a; border-color: rgba(90, 140, 110, 0.3); }
+body[data-theme="ink"] .m-scripture { background: #1f1712; border-color: rgba(181, 98, 63, 0.3); }
 .m-input {
   width: 100%; border: none; outline: none; background: transparent;
   color: var(--ink); font-size: 16px; padding: 7px 0;
@@ -594,7 +594,7 @@ body[data-theme="ink"] .m-suggest { background: #12161e; }
 .lj-wkscore b { font-size: 12px; font-weight: 700; color: var(--soft-ink); min-width: 30px; text-align: right; }
 .lj-ai-plan { position: absolute; pointer-events: auto; cursor: pointer; background: transparent; border: none; border-radius: 999px; }
 .lj-ai-plan:hover { background: rgba(255, 255, 255, 0.14); }
-body[data-theme="ink"] .lj-study { background: #161f1a; border-color: rgba(90,140,110,.4); color: #9fcdb0; }
+body[data-theme="ink"] .lj-study { background: #1f1712; border-color: rgba(181,98,63,.4); color: #d79c81; }
 body[data-theme="ink"] .lj-study:hover { background: var(--accent); color: #fff; }
 
 /* Bible Studies journal */
