@@ -503,15 +503,16 @@ window.LJTemplates = (function () {
       hline(ctx, L.rx + L.fndLabelW, y + 7, L.rw - L.fndLabelW, COLORS.faint);
     });
 
-    // Scripture card (green-tinted glass in the dark theme)
-    if (dark) glassCard(ctx, L.card.x, L.card.y, L.card.w, L.card.h, '#161f1a', 'rgba(90,140,110,0.25)');
+    // Scripture card (warm terracotta-tinted glass in the dark theme, echoing
+    // the red "Thankful" banner so the spiritual sections share the palette)
+    if (dark) glassCard(ctx, L.card.x, L.card.y, L.card.w, L.card.h, '#1f1712', 'rgba(181,98,63,0.30)');
     else {
       ctx.save();
       ctx.fillStyle = '#f1ecdf';
       roundRect(ctx, L.card.x, L.card.y, L.card.w, L.card.h, 16); ctx.fill();
       ctx.restore();
     }
-    daySection(ctx, 'SCRIPTURE', 'What did I read?', L.rx, L.scr.y, dark ? '#9fcdb0' : null);
+    daySection(ctx, 'SCRIPTURE', 'What did I read?', L.rx, L.scr.y, dark ? '#d79c81' : null);
     L.scr.d.forEach((y) => dotLine(ctx, L.rx, y, L.rw, COLORS.faint));
     daySection(ctx, 'OBSERVE & APPLY', 'What did I learn?', L.rx, L.obs.y);
     L.obs.d.forEach((y) => dotLine(ctx, L.rx, y, L.rw, COLORS.faint));

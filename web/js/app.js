@@ -944,6 +944,7 @@
     flow.data = {
       reviewChecks: Object.assign({}, ctx.yChecks),
       reviewNote: '', thank: '', tops: ['', '', ''], scr: '', journal: '', prayer: '',
+      study: { read: '', obsApply: '', gospel: '' },
       sch: {}, steps: seededSteps, remindTime: '07:00',
       cycleGoals: cyc ? LJData.FOUNDATIONS.map((F, i) => ctx.goals['g' + i + 'goal'] || '') : [],
       lastScore: flow.review ? (flow.review.priorScore || '') : '',
@@ -956,7 +957,7 @@
     if (cyc && cyc.day === 1) flow.steps.push('cyclegoals');
     else if (flow.review) flow.steps.push('weekreview');
     if (hasYesterday) flow.steps.push('review');
-    flow.steps.push('thank', 'scripture', 'tops', 'journal', 'schedule', 'foundations');
+    flow.steps.push('thank', 'scripture', 'study', 'tops', 'journal', 'schedule', 'foundations');
     if (window.LJNotify && LJNotify.available() && !LJKV.get('lifejournal.reminder')) flow.steps.push('reminder');
     flow.step = 0;
     const day = new Date().toLocaleDateString(undefined, { weekday: 'long' });
@@ -1198,6 +1199,26 @@
       inp.addEventListener('input', updateDD);
       inp.addEventListener('blur', () => setTimeout(() => dd.classList.add('hidden'), 200));
       body.appendChild(dd);
+    } else if (kind === 'study') {
+      body.appendChild(mfLabel('Study the Word'));
+      body.appendChild(el('p', 'mf-sub', d.scr.trim()
+        ? `Sit with ${escapeHtml(d.scr.trim())} for a moment.`
+        : 'Sit with today’s passage for a moment.'));
+      const read = mfInputRow((v) => (v === undefined ? d.study.read : (d.study.read = v)),
+        'What did you read? A verse or a sentence…');
+      body.appendChild(read);
+      body.appendChild(mfLabel('Observe & apply'));
+      const oa = el('textarea', 'mf-textarea');
+      oa.rows = 3; oa.placeholder = 'What did you learn? How will you live it out today?'; oa.value = d.study.obsApply;
+      oa.addEventListener('input', () => { d.study.obsApply = oa.value; });
+      body.appendChild(oa);
+      body.appendChild(mfLabel('The gospel'));
+      const gsp = mfInputRow((v) => (v === undefined ? d.study.gospel : (d.study.gospel = v)),
+        'How does this point to Christ?');
+      body.appendChild(gsp);
+      const aiStudy = el('button', 'mf-chip mf-suggest-chip', '✦ Create an AI Bible study');
+      aiStudy.onclick = () => openStudy(d.scr || '');
+      body.appendChild(aiStudy);
     } else if (kind === 'journal') {
       body.appendChild(mfLabel('Journal'));
       const jp = el('p', 'mf-sub mf-prompt-j', 'What is on your heart this morning?');
@@ -1381,6 +1402,12 @@
     if (d.thank.trim()) data.fields.th0 = d.thank.trim();
     d.tops.forEach((t, i) => { if (t.trim()) data.fields['top' + i] = t.trim(); });
     if (d.scr.trim()) data.fields.scr0 = d.scr.trim();
+    // Bible study reflection → the daily page's scripture/observe/gospel slots
+    if (d.study.read.trim()) data.fields.scr1 = d.study.read.trim();
+    const oaLines = d.study.obsApply.split('\n').map((s) => s.trim()).filter(Boolean);
+    if (oaLines[0]) data.fields.obs0 = oaLines[0];
+    if (oaLines.length > 1) data.fields.obs1 = oaLines.slice(1).join(' ');
+    if (d.study.gospel.trim()) data.fields.gos0 = d.study.gospel.trim();
     Object.keys(d.sch).forEach((k) => { if ((d.sch[k] || '').trim()) data.fields[k] = d.sch[k].trim(); });
     d.steps.forEach((s, i) => { if (s.trim()) data.fields['step' + i] = s.trim(); });
     const lines = [];
