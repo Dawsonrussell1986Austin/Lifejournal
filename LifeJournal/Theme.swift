@@ -16,6 +16,6 @@ enum LJTheme {
     static let rule      = Color(red: 0.80, green: 0.82, blue: 0.86)
     static let faint     = Color(red: 0.88, green: 0.90, blue: 0.93)
     static let paper     = Color.white
-    static let accent    = Color(red: 0.42, green: 0.52, blue: 0.45)
+    static let accent    = Color(red: 0.710, green: 0.384, blue: 0.247)
     static let shelf     = Color(red: 0.95, green: 0.94, blue: 0.91)
 }
